@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Report Contacts — Bigfoot Bites</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;700&family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F3F4F1;
+    --ink: #1C2321;
+    --ink-soft: #52605B;
+    --rule: #D7D9D3;
+    --ledger-green: #2F6F5E;
+    --ledger-green-soft: #E4EEEA;
+    --revenue-amber: #B3752E;
+    --revenue-amber-soft: #F3E9DA;
+    --danger: #B3492D;
+    --danger-soft: #F5E4DE;
+    --inactive: #9A8F7D;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 5rem;
+  }
+
+  header {
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 1rem;
+  }
+
+  h1 {
+    font-family: 'Roboto Slab', serif;
+    font-weight: 700;
+    font-size: 1.6rem;
+    margin: 0 0 0.25rem;
+    letter-spacing: -0.01em;
+  }
+
+  .subtitle {
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+  }
+
+  .panel {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.1rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .panel-header h2 {
+    font-family: 'Roboto Slab', serif;
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  button {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    padding: 0.45rem 0.85rem;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+  button:hover { opacity: 0.85; }
+  button:focus-visible {
+    outline: 2px solid var(--ledger-green);
+    outline-offset: 2px;
+  }
+
+  .btn-primary { background: var(--ledger-green); color: #fff; }
+  .btn-quiet { background: transparent; color: var(--ink-soft); border-color: var(--rule); }
+  .btn-danger { background: transparent; color: var(--danger); border-color: var(--danger-soft); }
+  .btn-danger:hover { background: var(--danger-soft); }
+
+  #add-form {
+    display: none;
+    padding: 1.1rem;
+    gap: 0.75rem;
+    grid-template-columns: 0.9fr 0.9fr 0.9fr 1.3fr 0.7fr 0.6fr auto;
+    align-items: start;
+  }
+  #add-form.open { display: grid; }
+
+  label {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    margin-bottom: 0.3rem;
+  }
+
+  input, select {
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.55rem;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    background: #fff;
+    color: var(--ink);
+  }
+  input:focus, select:focus {
+    outline: 2px solid var(--ledger-green);
+    outline-offset: 1px;
+  }
+
+  .field-note {
+    font-size: 0.74rem;
+    color: var(--revenue-amber);
+    margin-top: 0.35rem;
+    line-height: 1.3;
+    display: none;
+  }
+  .field-note.show { display: block; }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding-top: 1.5rem;
+  }
+  .checkbox-row input { width: auto; }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  thead th {
+    text-align: left;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  tbody td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.92rem;
+    vertical-align: middle;
+  }
+
+  tbody tr.location-start td { border-top: 2px solid var(--ink); }
+
+  td.location { font-weight: 600; }
+
+  .type-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+  }
+  .type-tag::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ledger-green);
+  }
+  .type-tag.cc::before { background: var(--revenue-amber); }
+
+  td.active-cell { text-align: center; }
+  .pill {
+    display: inline-block;
+    font-size: 0.72rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 20px;
+  }
+  .pill.on { background: var(--ledger-green-soft); color: var(--ledger-green); }
+  .pill.off { background: #F0EEE9; color: var(--inactive); }
+
+  td.actions { text-align: right; white-space: nowrap; }
+  td.actions button { margin-left: 0.4rem; }
+
+  tr.editing td { background: var(--ledger-green-soft); }
+  tr.editing input, tr.editing select { background: #fff; }
+
+  tr.location-summary td {
+    background: var(--ledger-green-soft);
+    color: var(--ledger-green);
+    font-weight: 600;
+    border-bottom: 2px solid var(--ink);
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    font-size: 0.82rem;
+  }
+  tr.location-summary td.gap {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+
+  tr.location-empty td {
+    border-top: 2px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
+    background: var(--danger-soft);
+    color: var(--danger);
+    font-size: 0.85rem;
+    padding: 0.75rem 1rem;
+  }
+  tr.location-empty .loc-name { font-weight: 600; color: var(--ink); }
+
+  .empty-state {
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--ink-soft);
+  }
+  .empty-state strong { display: block; color: var(--ink); margin-bottom: 0.35rem; font-family: 'Roboto Slab', serif; }
+
+  #status-line {
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    margin-top: 0.75rem;
+    min-height: 1.2em;
+  }
+  #status-line.error { color: var(--danger); }
+
+  .design-note {
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    background: #fff;
+    border: 1px dashed var(--rule);
+    border-radius: 6px;
+    padding: 0.9rem 1.1rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+  .design-note strong { color: var(--ink); }
+
+  @media (max-width: 720px) {
+    #add-form.open { grid-template-columns: 1fr 1fr; }
+    thead { display: none; }
+    tbody tr { display: block; border-bottom: 2px solid var(--rule); }
+    tbody td { display: flex; justify-content: space-between; border-bottom: none; padding: 0.5rem 1rem; }
+    tbody td::before { content: attr(data-label); font-size: 0.72rem; text-transform: uppercase; color: var(--ink-soft); }
+    td.actions { justify-content: flex-end; }
+    td.actions::before { content: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Report Contacts</h1>
+    <div class="subtitle">Livano Monthly Reporting — narrative &amp; template recipients</div>
+  </header>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>Contacts</h2>
+      <button class="btn-primary" id="toggle-add">+ Add contact</button>
+    </div>
+
+    <form id="add-form">
+      <div>
+        <label for="add-location">Location</label>
+        <select id="add-location" required></select>
+      </div>
+      <div>
+        <label for="add-first">First name</label>
+        <input id="add-first" type="text" placeholder="Karen" required>
+      </div>
+      <div>
+        <label for="add-last">Last name</label>
+        <input id="add-last" type="text" placeholder="Foss" required>
+      </div>
+      <div>
+        <label for="add-email">Email</label>
+        <input id="add-email" type="email" placeholder="karen@example.com" required>
+      </div>
+      <div>
+        <label for="add-type">Recipient type</label>
+        <select id="add-type" required>
+          <option value="to">To (primary)</option>
+          <option value="cc">CC</option>
+        </select>
+        <div class="field-note" id="add-type-note"></div>
+      </div>
+      <div class="checkbox-row">
+        <input id="add-active" type="checkbox" checked>
+        <label for="add-active" style="margin-bottom:0;text-transform:none;letter-spacing:0;font-size:0.85rem;">Active</label>
+      </div>
+      <div style="padding-top:1.5rem;">
+        <button type="submit" class="btn-primary">Save</button>
+        <button type="button" class="btn-quiet" id="cancel-add">Cancel</button>
+      </div>
+    </form>
+
+    <table id="contacts-table" style="display:none;">
+      <thead>
+        <tr>
+          <th>Location</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Type</th>
+          <th style="text-align:center;">Active</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="contacts-body"></tbody>
+    </table>
+
+    <div class="empty-state" id="empty-state" style="display:none;">
+      <strong>No contacts yet</strong>
+      Add the first one above — every reporting location needs at least one "To" contact.
+    </div>
+  </section>
+
+  <div id="status-line"></div>
+</main>
+
+<script>
+  // Single endpoint for everything: GET to read, POST with an
+  // `operation` field ('create' | 'update' | 'delete') for all writes.
+  // Same pattern as the Tax Obligations — CRUD API.
+  const API_BASE = 'https://randysmith42.app.n8n.cloud/webhook/report-contacts';
+  const API_KEY = 'REPLACE_WITH_INTERNAL_API_SECRET';
+  const LOCATIONS_API_BASE = 'https://randysmith42.app.n8n.cloud/webhook/locations';
+
+  let LOCATIONS = [];
+  let contacts = [];
+  let editingId = null;
+
+  const tableEl = document.getElementById('contacts-table');
+  const bodyEl = document.getElementById('contacts-body');
+  const emptyEl = document.getElementById('empty-state');
+  const statusEl = document.getElementById('status-line');
+  const addForm = document.getElementById('add-form');
+  const addLocationSelect = document.getElementById('add-location');
+  const addTypeSelect = document.getElementById('add-type');
+  const addTypeNote = document.getElementById('add-type-note');
+
+  function setStatus(message, isError) {
+    statusEl.textContent = message || '';
+    statusEl.className = isError ? 'error' : '';
+  }
+
+  async function loadLocations() {
+    const res = await fetch(LOCATIONS_API_BASE, { method: 'GET', headers: { 'X-API-Key': API_KEY } });
+    if (!res.ok) throw new Error('Server returned ' + res.status);
+    const data = await res.json();
+    LOCATIONS = data.map(l => l.location);
+    addLocationSelect.innerHTML = '';
+    for (const loc of LOCATIONS.slice().sort((a, b) => a.localeCompare(b))) {
+      const o = document.createElement('option');
+      o.value = loc;
+      o.textContent = loc;
+      addLocationSelect.appendChild(o);
+    }
+  }
+
+  async function loadContacts() {
+    setStatus('Loading…');
+    try {
+      const res = await fetch(API_BASE, { method: 'GET', headers: { 'X-API-Key': API_KEY } });
+      if (!res.ok) throw new Error('Server returned ' + res.status);
+      contacts = await res.json();
+      render();
+      setStatus('');
+    } catch (err) {
+      setStatus('Could not load contacts — ' + err.message, true);
+    }
+  }
+
+  async function writeContact(payload) {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Server returned ' + res.status);
+    return res.json();
+  }
+
+  function primaryFor(location, excludeId) {
+    return contacts.find(c => c.location === location && c.recipient_type === 'to' && c.id !== excludeId);
+  }
+
+  function render() {
+    if (!contacts.length) {
+      tableEl.style.display = 'none';
+      emptyEl.style.display = 'block';
+      return;
+    }
+    tableEl.style.display = 'table';
+    emptyEl.style.display = 'none';
+    bodyEl.innerHTML = '';
+
+    const sortedLocations = LOCATIONS.slice().sort((a, b) => a.localeCompare(b));
+
+    sortedLocations.forEach(location => {
+      const rows = contacts
+        .filter(c => c.location === location)
+        .sort((a, b) => {
+          if (a.recipient_type !== b.recipient_type) return a.recipient_type === 'to' ? -1 : 1;
+          const aName = a.last_name + ' ' + a.first_name;
+          const bName = b.last_name + ' ' + b.first_name;
+          return aName.localeCompare(bName);
+        });
+
+      if (!rows.length) {
+        const tr = document.createElement('tr');
+        tr.className = 'location-empty';
+        const td = document.createElement('td');
+        td.colSpan = 6;
+        td.innerHTML = '<span class="loc-name">' + location + '</span> — no contacts configured. Narrative and template reports for this location have nowhere to send.';
+        tr.appendChild(td);
+        bodyEl.appendChild(tr);
+        return;
+      }
+
+      rows.forEach((row, i) => {
+        const tr = document.createElement('tr');
+        if (i === 0) tr.classList.add('location-start');
+
+        if (editingId === row.id) {
+          tr.classList.add('editing');
+          tr.appendChild(editableCell('location', row, 'select', LOCATIONS));
+          tr.appendChild(editableNameCell(row));
+          tr.appendChild(editableCell('email', row, 'email'));
+          tr.appendChild(editableTypeCell(row));
+          tr.appendChild(editableActiveCell(row));
+          tr.appendChild(editActionsCell(row));
+        } else {
+          tr.appendChild(td('Location', row.location, 'location'));
+          tr.appendChild(td('Name', row.first_name + ' ' + row.last_name, ''));
+          tr.appendChild(td('Email', row.email, ''));
+          const typeTd = td('Type', '', '');
+          const span = document.createElement('span');
+          span.className = 'type-tag ' + row.recipient_type;
+          span.textContent = row.recipient_type === 'to' ? 'To (primary)' : 'CC';
+          typeTd.appendChild(span);
+          tr.appendChild(typeTd);
+          const activeTd = td('Active', '', 'active-cell');
+          const pill = document.createElement('span');
+          pill.className = 'pill ' + (row.active ? 'on' : 'off');
+          pill.textContent = row.active ? 'Active' : 'Inactive';
+          activeTd.appendChild(pill);
+          tr.appendChild(activeTd);
+          tr.appendChild(viewActionsCell(row));
+        }
+
+        bodyEl.appendChild(tr);
+      });
+
+      const primary = primaryFor(location);
+      const ccCount = rows.filter(c => c.recipient_type === 'cc').length;
+      const summaryTr = document.createElement('tr');
+      summaryTr.className = 'location-summary' + (primary ? '' : ' gap');
+      const summaryTd = document.createElement('td');
+      summaryTd.colSpan = 6;
+      summaryTd.textContent = primary
+        ? (location + ' — primary: ' + primary.first_name + ' ' + primary.last_name + (ccCount ? ' · ' + ccCount + ' cc' : ''))
+        : (location + ' — ⚠ no primary contact configured');
+      summaryTr.appendChild(summaryTd);
+      bodyEl.appendChild(summaryTr);
+    });
+  }
+
+  function td(label, text, cls) {
+    const cell = document.createElement('td');
+    cell.dataset.label = label;
+    if (cls) cell.className = cls;
+    cell.textContent = text;
+    return cell;
+  }
+
+  function editableCell(field, row, kind, options) {
+    const cell = document.createElement('td');
+    cell.dataset.label = field;
+    let input;
+    if (kind === 'select') {
+      input = document.createElement('select');
+      for (const opt of options) {
+        const o = document.createElement('option');
+        o.value = opt;
+        o.textContent = opt;
+        if (opt === row[field]) o.selected = true;
+        input.appendChild(o);
+      }
+    } else {
+      input = document.createElement('input');
+      input.type = kind === 'email' ? 'email' : 'text';
+      input.value = row[field];
+    }
+    input.id = 'edit-' + field + '-' + row.id;
+    cell.appendChild(input);
+    return cell;
+  }
+
+  function editableNameCell(row) {
+    const cell = document.createElement('td');
+    cell.dataset.label = 'Name';
+    const wrap = document.createElement('div');
+    wrap.style.display = 'flex';
+    wrap.style.gap = '0.35rem';
+    const first = document.createElement('input');
+    first.type = 'text';
+    first.id = 'edit-first_name-' + row.id;
+    first.value = row.first_name;
+    first.style.width = '50%';
+    const last = document.createElement('input');
+    last.type = 'text';
+    last.id = 'edit-last_name-' + row.id;
+    last.value = row.last_name;
+    last.style.width = '50%';
+    wrap.appendChild(first);
+    wrap.appendChild(last);
+    cell.appendChild(wrap);
+    return cell;
+  }
+
+  function editableTypeCell(row) {
+    const cell = document.createElement('td');
+    cell.dataset.label = 'Type';
+    const select = document.createElement('select');
+    select.id = 'edit-recipient_type-' + row.id;
+    [['to', 'To (primary)'], ['cc', 'CC']].forEach(([value, label]) => {
+      const o = document.createElement('option');
+      o.value = value;
+      o.textContent = label;
+      if (row.recipient_type === value) o.selected = true;
+      select.appendChild(o);
+    });
+    cell.appendChild(select);
+    return cell;
+  }
+
+  function editableActiveCell(row) {
+    const cell = document.createElement('td');
+    cell.dataset.label = 'Active';
+    cell.className = 'active-cell';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.id = 'edit-active-' + row.id;
+    input.checked = row.active;
+    cell.appendChild(input);
+    return cell;
+  }
+
+  function viewActionsCell(row) {
+    const cell = document.createElement('td');
+    cell.className = 'actions';
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn-quiet';
+    editBtn.textContent = 'Edit';
+    editBtn.onclick = () => { editingId = row.id; render(); };
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-danger';
+    delBtn.textContent = 'Delete';
+    delBtn.onclick = () => deleteContact(row);
+    cell.appendChild(editBtn);
+    cell.appendChild(delBtn);
+    return cell;
+  }
+
+  function editActionsCell(row) {
+    const cell = document.createElement('td');
+    cell.className = 'actions';
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'btn-primary';
+    saveBtn.textContent = 'Save';
+    saveBtn.onclick = () => saveEdit(row);
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn-quiet';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.onclick = () => { editingId = null; render(); };
+    cell.appendChild(saveBtn);
+    cell.appendChild(cancelBtn);
+    return cell;
+  }
+
+  async function saveEdit(row) {
+    const payload = {
+      operation: 'update',
+      id: row.id,
+      location: document.getElementById('edit-location-' + row.id).value,
+      first_name: document.getElementById('edit-first_name-' + row.id).value,
+      last_name: document.getElementById('edit-last_name-' + row.id).value,
+      email: document.getElementById('edit-email-' + row.id).value,
+      recipient_type: document.getElementById('edit-recipient_type-' + row.id).value,
+      active: document.getElementById('edit-active-' + row.id).checked
+    };
+    setStatus('Saving…');
+    try {
+      await writeContact(payload);
+      editingId = null;
+      await loadContacts();
+      setStatus('Saved.');
+    } catch (err) {
+      setStatus('Could not save — ' + err.message, true);
+    }
+  }
+
+  async function deleteContact(row) {
+    const label = row.first_name + ' ' + row.last_name + ' (' + row.location + ')';
+    if (!confirm('Delete ' + label + '? This can\'t be undone.')) return;
+    setStatus('Deleting…');
+    try {
+      await writeContact({ operation: 'delete', id: row.id });
+      await loadContacts();
+      setStatus('Deleted ' + label + '.');
+    } catch (err) {
+      setStatus('Could not delete — ' + err.message, true);
+    }
+  }
+
+  function updateAddTypeNote() {
+    const loc = addLocationSelect.value;
+    const type = addTypeSelect.value;
+    if (type === 'to') {
+      const existing = primaryFor(loc);
+      if (existing) {
+        addTypeNote.textContent = '⚠ ' + existing.first_name + ' ' + existing.last_name + ' is currently the primary for ' + loc + '. Saving will move them to CC.';
+        addTypeNote.classList.add('show');
+        return;
+      }
+    }
+    addTypeNote.classList.remove('show');
+  }
+
+  addLocationSelect.addEventListener('change', updateAddTypeNote);
+  addTypeSelect.addEventListener('change', updateAddTypeNote);
+
+  document.getElementById('toggle-add').onclick = () => { addForm.classList.add('open'); updateAddTypeNote(); };
+  document.getElementById('cancel-add').onclick = () => { addForm.classList.remove('open'); addForm.reset(); addTypeNote.classList.remove('show'); };
+
+  addForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      operation: 'create',
+      location: addLocationSelect.value,
+      first_name: document.getElementById('add-first').value,
+      last_name: document.getElementById('add-last').value,
+      email: document.getElementById('add-email').value,
+      recipient_type: addTypeSelect.value,
+      active: document.getElementById('add-active').checked
+    };
+    setStatus('Saving…');
+    try {
+      await writeContact(payload);
+      addForm.reset();
+      addForm.classList.remove('open');
+      addTypeNote.classList.remove('show');
+      await loadContacts();
+      setStatus('Added.');
+    } catch (err) {
+      setStatus('Could not add — ' + err.message, true);
+    }
+  });
+
+  loadLocations()
+    .then(loadContacts)
+    .catch(err => setStatus('Could not load locations — ' + err.message, true));
+</script>
+</body>
+</html>
