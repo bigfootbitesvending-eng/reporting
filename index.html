@@ -31,7 +31,7 @@ if (!locationParam || !month) {
   heading.textContent = `Generating report — ${locationParam}, ${month}`;
   fetch('https://randysmith42.app.n8n.cloud/webhook/reports/generate', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-API-Key': API_SECRET },
+    headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
     body: JSON.stringify({ location: locationParam, month })
   })
   .then(res => res.json().then(body => ({ ok: res.ok, body })))
