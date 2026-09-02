@@ -1,1 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Generate Monthly Report</title>
+<style>
+  body { font-family: sans-serif; max-width: 480px; margin: 60px auto; padding: 0 20px; }
+  #status { margin-top: 20px; }
+  .error { color: #b00020; }
+  .success { color: #1a7f37; }
+</style>
+</head>
+<body>
+<h2 id="heading">Generating report...</h2>
+<div id="status">Please wait, this can take up to a minute.</div>
 
+<script>
+const API_KEY = 'tMEUHYnK8aCNccKZ5Zp#oMBazyR3deGM';
+
+const params = new URLSearchParams(window.location.search);
+const location = params.get('location');
+const month = params.get('month');
+
+const heading = document.getElementById('heading');
+const status = document.getElementById('status');
+
+if (!location || !month) {
+  heading.textContent = 'Missing parameters';
+  status.innerHTML = '<span class="error">This link is missing a location or month parameter.</span>';
+} else {
+  heading.textContent = `Generating report — ${location}, ${month}`;
+  fetch('https://randysmith42.app.n8n.cloud/webhook/reports/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-API-Key': API_SECRET },
+    body: JSON.stringify({ location, month })
+  })
+  .then(res => res.json().then(body => ({ ok: res.ok, body })))
+  .then(({ ok, body }) => {
+    if (ok && body.report_id) {
+      heading.textContent = 'Report generated';
+      status.innerHTML = `<span class="success">Report #${body.report_id} created — status: ${body.status}.</span><br>Review it in your normal reporting tool once the review screen is built.`;
+    } else {
+      heading.textContent = 'Generation failed';
+      status.innerHTML = `<span class="error">${JSON.stringify(body)}</span>`;
+    }
+  })
+  .catch(err => {
+    heading.textContent = 'Generation failed';
+    status.innerHTML = `<span class="error">${err.message}</span>`;
+  });
+}
+</script>
+</body>
+</html>
