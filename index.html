@@ -18,21 +18,21 @@
 const API_KEY = 'tMEUHYnK8aCNccKZ5Zp#oMBazyR3deGM';
 
 const params = new URLSearchParams(window.location.search);
-const location = params.get('location');
+const locationParam = params.get('location');
 const month = params.get('month');
 
 const heading = document.getElementById('heading');
 const status = document.getElementById('status');
 
-if (!location || !month) {
+if (!locationParam || !month) {
   heading.textContent = 'Missing parameters';
   status.innerHTML = '<span class="error">This link is missing a location or month parameter.</span>';
 } else {
-  heading.textContent = `Generating report — ${location}, ${month}`;
+  heading.textContent = `Generating report — ${locationParam}, ${month}`;
   fetch('https://randysmith42.app.n8n.cloud/webhook/reports/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-API-Key': API_SECRET },
-    body: JSON.stringify({ location, month })
+    body: JSON.stringify({ location: locationParam, month })
   })
   .then(res => res.json().then(body => ({ ok: res.ok, body })))
   .then(({ ok, body }) => {
