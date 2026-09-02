@@ -133,6 +133,214 @@
     color: var(--text-muted);
     font-size: 14px;
   }
+
+  /* ---- Review screen ------------------------------------------------ */
+  .back-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 16px;
+  }
+  .back-btn:hover { color: var(--accent); }
+
+  .review-header {
+    margin-bottom: 20px;
+  }
+  .review-header h2 {
+    margin: 0 0 4px;
+    font-size: 19px;
+  }
+  .review-header .review-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .progress-steps {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+  }
+  .progress-step {
+    flex: 1;
+    text-align: center;
+    padding: 8px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .progress-step.done {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .progress-step.current {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .error-banner {
+    background: #fbeaea;
+    border: 1px solid var(--status-error);
+    color: var(--status-error);
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+
+  .text-block {
+    margin-bottom: 20px;
+  }
+  .text-block .block-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .text-block-inner {
+    border-left: 4px solid var(--accent);
+    padding-left: 14px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 110px;
+    font: inherit;
+    font-size: 14px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    resize: vertical;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+  .thumbs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .thumb-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--card-bg);
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .thumb-btn.active-up { background: var(--status-sent); color: #fff; border-color: var(--status-sent); }
+  .thumb-btn.active-down { background: var(--status-error); color: #fff; border-color: var(--status-error); }
+  .notes-field {
+    display: none;
+    margin-top: 8px;
+    width: 100%;
+    min-height: 60px;
+    font-size: 13px;
+  }
+  .notes-field.visible { display: block; }
+
+  .section-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .section-card.is-skipped {
+    opacity: 0.55;
+  }
+  .section-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .section-card-header h3 {
+    margin: 0;
+    font-size: 14px;
+  }
+  .skip-btn {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    background: var(--status-not-started);
+    color: #fff;
+  }
+  .skip-btn.is-skipped {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .section-empty {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .data-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .data-item .data-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+  .data-item .data-value {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .item-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .item-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    font-size: 13px;
+  }
+
+  .action-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+  }
+  button.primary, button.secondary {
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  button.primary {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+  }
+  button.secondary {
+    background: var(--card-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .action-note {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+  }
 </style>
 </head>
 <body>
@@ -148,8 +356,16 @@
 </header>
 
 <main>
-  <div class="status-line" id="status-line"></div>
-  <div id="results"></div>
+  <section id="dashboard-view">
+    <div class="status-line" id="status-line"></div>
+    <div id="results"></div>
+  </section>
+
+  <section id="review-view" hidden>
+    <button type="button" class="back-btn" id="back-to-dashboard">‹ Back to all locations</button>
+    <div class="status-line" id="review-status-line"></div>
+    <div id="review-content"></div>
+  </section>
 </main>
 
 <script>
@@ -169,7 +385,21 @@
   const statusLine = document.getElementById('status-line');
   const resultsEl = document.getElementById('results');
 
+  const dashboardView = document.getElementById('dashboard-view');
+  const reviewView = document.getElementById('review-view');
+  const reviewStatusLine = document.getElementById('review-status-line');
+  const reviewContent = document.getElementById('review-content');
+  const backBtn = document.getElementById('back-to-dashboard');
+
   const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  let lastLoadedApiMonth = null;
+  let currentReport = null;
+  let skippedSections = new Set();
+  let openingRating = null;
+  let closingRating = null;
+
+  // ---- Month navigation ---------------------------------------------
 
   function currentMonthValue() {
     const now = new Date();
@@ -177,7 +407,6 @@
   }
 
   function monthInputToApiValue(monthInputValue) {
-    // <input type="month"> gives "YYYY-MM" — API expects a full date, first of month.
     return `${monthInputValue}-01`;
   }
 
@@ -194,6 +423,15 @@
     loadReports();
   }
 
+  // ---- View switching -------------------------------------------------
+
+  function showView(view) {
+    dashboardView.hidden = view !== 'dashboard';
+    reviewView.hidden = view !== 'review';
+  }
+
+  // ---- Dashboard view -------------------------------------------------
+
   function formatTimestamp(ts) {
     if (!ts) return null;
     const d = new Date(ts);
@@ -201,18 +439,12 @@
   }
 
   function statusLabel(status) {
-    const labels = {
-      not_started: 'Not started',
-      draft: 'Ready to review',
-      sent: 'Sent',
-      error: 'Error'
-    };
+    const labels = { not_started: 'Not started', draft: 'Ready to review', sent: 'Sent', error: 'Error' };
     return labels[status] || status;
   }
 
   function renderLocations(locations) {
     resultsEl.innerHTML = '';
-
     if (!locations || locations.length === 0) {
       resultsEl.innerHTML = '<div class="empty-state">No active locations returned.</div>';
       return;
@@ -247,17 +479,10 @@
       card.appendChild(badge);
       if (meta.textContent) card.appendChild(meta);
 
-      const openReview = () => {
-        // Report review screen isn't built yet — GET/POST /reports/draft
-        // don't exist. This is a placeholder until that endpoint is live.
-        alert(`Review screen not built yet.\n\nLocation: ${loc.location}\nStatus: ${loc.status}\nReport ID: ${loc.report_id ?? 'none'}`);
-      };
-      card.addEventListener('click', openReview);
+      const open = () => openReview(loc.location);
+      card.addEventListener('click', open);
       card.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          openReview();
-        }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
       });
 
       grid.appendChild(card);
@@ -267,22 +492,20 @@
   }
 
   async function loadReports() {
-    const apiMonth = monthInputToApiValue(monthInput.value);
+    lastLoadedApiMonth = monthInputToApiValue(monthInput.value);
     statusLine.className = 'status-line';
     statusLine.textContent = 'Loading…';
     resultsEl.innerHTML = '<div class="loading-state">Loading locations…</div>';
 
     try {
-      const res = await fetch(`${API_BASE}/list?month=${apiMonth}`, {
+      const res = await fetch(`${API_BASE}/list?month=${lastLoadedApiMonth}`, {
         method: 'GET',
         headers: { 'X-API-Key': API_KEY }
       });
-
       if (!res.ok) {
         const bodyText = await res.text();
         throw new Error(`${res.status} ${res.statusText} — ${bodyText}`);
       }
-
       const locations = await res.json();
       statusLine.textContent = '';
       renderLocations(locations);
@@ -294,12 +517,279 @@
     }
   }
 
+  // ---- Review view ------------------------------------------------------
+
+  async function openReview(location) {
+    showView('review');
+    reviewStatusLine.className = 'status-line';
+    reviewStatusLine.textContent = 'Loading report — this can take about a minute if the draft hasn\u2019t been generated yet.';
+    reviewContent.innerHTML = '';
+
+    try {
+      const res = await fetch(`${API_BASE}/draft?location=${encodeURIComponent(location)}&month=${lastLoadedApiMonth}`, {
+        method: 'GET',
+        headers: { 'X-API-Key': API_KEY }
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        throw new Error(body.error || `${res.status} ${res.statusText}`);
+      }
+      currentReport = body;
+      skippedSections = new Set(body.sections_skipped || []);
+      openingRating = body.opening_rating;
+      closingRating = body.closing_rating;
+      reviewStatusLine.textContent = '';
+      renderReview(body);
+    } catch (err) {
+      reviewStatusLine.className = 'status-line error';
+      reviewStatusLine.textContent = `Couldn't load report: ${err.message}`;
+      console.error(err);
+    }
+  }
+
+  function progressStepIndex(report) {
+    if (report.status === 'error') return -1;
+    if (report.status === 'sent') return 3;
+    if (report.status === 'draft') return 2; // draft generated, currently in review
+    return 1;
+  }
+
+  function renderProgressSteps(report) {
+    const labels = ['Data assembled', 'Draft generated', 'Your review', 'Sent'];
+    const current = progressStepIndex(report);
+    const wrap = document.createElement('div');
+    wrap.className = 'progress-steps';
+    labels.forEach((label, i) => {
+      const step = document.createElement('div');
+      step.className = 'progress-step';
+      if (current >= 0 && i < current) step.classList.add('done');
+      if (i === current) step.classList.add('current');
+      step.textContent = label;
+      wrap.appendChild(step);
+    });
+    return wrap;
+  }
+
+  function renderTextBlock(labelText, fieldKey, value, rating) {
+    const block = document.createElement('div');
+    block.className = 'text-block';
+
+    const label = document.createElement('div');
+    label.className = 'block-label';
+    label.textContent = labelText;
+    block.appendChild(label);
+
+    const inner = document.createElement('div');
+    inner.className = 'text-block-inner';
+
+    const textarea = document.createElement('textarea');
+    textarea.id = `${fieldKey}-textarea`;
+    textarea.value = value || '';
+    inner.appendChild(textarea);
+
+    const thumbs = document.createElement('div');
+    thumbs.className = 'thumbs';
+
+    const upBtn = document.createElement('button');
+    upBtn.type = 'button';
+    upBtn.className = 'thumb-btn';
+    upBtn.textContent = '\u{1F44D}';
+    upBtn.setAttribute('aria-label', 'Thumbs up');
+
+    const downBtn = document.createElement('button');
+    downBtn.type = 'button';
+    downBtn.className = 'thumb-btn';
+    downBtn.textContent = '\u{1F44E}';
+    downBtn.setAttribute('aria-label', 'Thumbs down');
+
+    const notesField = document.createElement('textarea');
+    notesField.className = 'notes-field';
+    notesField.placeholder = 'What was wrong with this? (optional)';
+    notesField.value = (fieldKey === 'opening' ? currentReport.opening_notes : currentReport.closing_notes) || '';
+
+    function applyRatingState(r) {
+      upBtn.classList.toggle('active-up', r === 1);
+      downBtn.classList.toggle('active-down', r === -1);
+      notesField.classList.toggle('visible', r === -1);
+    }
+    applyRatingState(rating);
+
+    upBtn.addEventListener('click', () => {
+      const newRating = (fieldKey === 'opening' ? openingRating : closingRating) === 1 ? null : 1;
+      if (fieldKey === 'opening') openingRating = newRating; else closingRating = newRating;
+      applyRatingState(newRating);
+    });
+    downBtn.addEventListener('click', () => {
+      const newRating = (fieldKey === 'opening' ? openingRating : closingRating) === -1 ? null : -1;
+      if (fieldKey === 'opening') openingRating = newRating; else closingRating = newRating;
+      applyRatingState(newRating);
+    });
+
+    thumbs.appendChild(upBtn);
+    thumbs.appendChild(downBtn);
+    inner.appendChild(thumbs);
+    inner.appendChild(notesField);
+    block.appendChild(inner);
+    return block;
+  }
+
+  function renderSectionBody(section) {
+    if (!section.has_data) {
+      const p = document.createElement('p');
+      p.className = 'section-empty';
+      p.textContent = 'No data available for this section yet.';
+      return p;
+    }
+
+    const data = section.data || {};
+
+    if (Array.isArray(data.items)) {
+      const list = document.createElement('ul');
+      list.className = 'item-list';
+      data.items.forEach((item, i) => {
+        const li = document.createElement('li');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = item.included !== false;
+        checkbox.addEventListener('change', () => { item.included = checkbox.checked; });
+        const label = document.createElement('span');
+        label.textContent = item.name || item.product_name || JSON.stringify(item);
+        li.appendChild(checkbox);
+        li.appendChild(label);
+        list.appendChild(li);
+      });
+      return list;
+    }
+
+    // Atomic section — flat key/value grid. Revenue gets friendlier labels;
+    // anything else falls back to the raw field names so new sections aren't invisible.
+    const FRIENDLY_LABELS = {
+      current_revenue: 'Revenue this month',
+      current_daily_rate: 'Daily rate',
+      prior_daily_rate: `Daily rate (${data.comparison_period_label || 'prior period'})`,
+      pct_change: 'Change vs. prior period',
+      days_current: 'Days in period'
+    };
+    const SKIP_KEYS = new Set(['comparison_period_label', 'prior_revenue', 'days_prior']);
+
+    const grid = document.createElement('div');
+    grid.className = 'data-grid';
+    Object.entries(data).forEach(([key, val]) => {
+      if (SKIP_KEYS.has(key) || val === null || val === undefined) return;
+      const item = document.createElement('div');
+      item.className = 'data-item';
+      const label = document.createElement('div');
+      label.className = 'data-label';
+      label.textContent = FRIENDLY_LABELS[key] || key;
+      const value = document.createElement('div');
+      value.className = 'data-value';
+      value.textContent = (key === 'pct_change')
+        ? (val === null ? '\u2014' : `${val > 0 ? '+' : ''}${val}%`)
+        : (key.includes('revenue') || key.includes('rate')) ? `$${val}` : val;
+      item.appendChild(label);
+      item.appendChild(value);
+      grid.appendChild(item);
+    });
+    return grid;
+  }
+
+  function renderSectionCard(section) {
+    const card = document.createElement('div');
+    card.className = 'section-card';
+    const isSkipped = skippedSections.has(section.section_key);
+    if (isSkipped) card.classList.add('is-skipped');
+
+    const header = document.createElement('div');
+    header.className = 'section-card-header';
+    const h3 = document.createElement('h3');
+    h3.textContent = section.display_name;
+    const skipBtn = document.createElement('button');
+    skipBtn.type = 'button';
+    skipBtn.className = 'skip-btn';
+    if (isSkipped) skipBtn.classList.add('is-skipped');
+    skipBtn.textContent = isSkipped ? 'Include' : 'Skip';
+    skipBtn.addEventListener('click', () => {
+      if (skippedSections.has(section.section_key)) {
+        skippedSections.delete(section.section_key);
+      } else {
+        skippedSections.add(section.section_key);
+      }
+      renderReview(currentReport);
+    });
+    header.appendChild(h3);
+    header.appendChild(skipBtn);
+    card.appendChild(header);
+    card.appendChild(renderSectionBody(section));
+    return card;
+  }
+
+  function renderReview(report) {
+    reviewContent.innerHTML = '';
+
+    const reviewHeader = document.createElement('div');
+    reviewHeader.className = 'review-header';
+    const h2 = document.createElement('h2');
+    h2.textContent = report.location;
+    const sub = document.createElement('div');
+    sub.className = 'review-sub';
+    const [y, m] = report.month.split('-');
+    sub.textContent = `${MONTH_NAMES[parseInt(m, 10) - 1]} ${y}`;
+    reviewHeader.appendChild(h2);
+    reviewHeader.appendChild(sub);
+    reviewContent.appendChild(reviewHeader);
+
+    reviewContent.appendChild(renderProgressSteps(report));
+
+    if (report.status === 'error') {
+      const banner = document.createElement('div');
+      banner.className = 'error-banner';
+      banner.textContent = report.error_message || 'Report generation failed for an unspecified reason.';
+      reviewContent.appendChild(banner);
+      return;
+    }
+
+    reviewContent.appendChild(renderTextBlock('Opening', 'opening', report.opening_text, openingRating));
+
+    (report.sections || []).forEach(section => {
+      reviewContent.appendChild(renderSectionCard(section));
+    });
+
+    reviewContent.appendChild(renderTextBlock('Closing', 'closing', report.closing_text, closingRating));
+
+    const actionRow = document.createElement('div');
+    actionRow.className = 'action-row';
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.className = 'secondary';
+    saveBtn.textContent = 'Save draft';
+    saveBtn.disabled = true;
+    saveBtn.title = 'POST /reports/draft is not built yet';
+    const approveBtn = document.createElement('button');
+    approveBtn.type = 'button';
+    approveBtn.className = 'primary';
+    approveBtn.textContent = 'Approve and send';
+    approveBtn.disabled = true;
+    approveBtn.title = 'POST /reports/approve is not built yet';
+    actionRow.appendChild(saveBtn);
+    actionRow.appendChild(approveBtn);
+    reviewContent.appendChild(actionRow);
+
+    const note = document.createElement('div');
+    note.className = 'action-note';
+    note.textContent = 'Save and Approve aren\u2019t wired up yet \u2014 edits, skip toggles, and ratings on this screen aren\u2019t persisted until those endpoints are built.';
+    reviewContent.appendChild(note);
+  }
+
+  backBtn.addEventListener('click', () => {
+    showView('dashboard');
+    currentReport = null;
+  });
+
+  // ---- Init ---------------------------------------------------------
+
   monthInput.value = currentMonthValue();
   updateMonthLabel();
-  monthInput.addEventListener('change', () => {
-    updateMonthLabel();
-    loadReports();
-  });
+  monthInput.addEventListener('change', () => { updateMonthLabel(); loadReports(); });
   prevBtn.addEventListener('click', () => shiftMonth(-1));
   nextBtn.addEventListener('click', () => shiftMonth(1));
   loadReports();
