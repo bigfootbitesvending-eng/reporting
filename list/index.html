@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monthly Reports — Bigfoot Bites</title>
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --card-bg: #ffffff;
+    --border: #ddd8cf;
+    --text: #2b2a27;
+    --text-muted: #75716a;
+    --accent: #3a5a40;
+    --status-not-started: #b8b2a5;
+    --status-draft: #c98a2c;
+    --status-sent: #3a7d44;
+    --status-error: #b23b3b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    padding: 24px 32px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+  }
+  .month-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  input[type="month"] {
+    font-size: 14px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+  main {
+    padding: 24px 32px 48px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .status-line {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    min-height: 18px;
+  }
+  .status-line.error {
+    color: var(--status-error);
+  }
+  .location-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .location-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+  .location-card:hover {
+    border-color: var(--accent);
+  }
+  .location-card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .location-name {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 8px;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    color: #fff;
+  }
+  .badge.not_started { background: var(--status-not-started); }
+  .badge.draft { background: var(--status-draft); }
+  .badge.sent { background: var(--status-sent); }
+  .badge.error { background: var(--status-error); }
+  .location-meta {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .empty-state, .loading-state {
+    padding: 40px 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Monthly Reports</h1>
+  <div class="month-control">
+    <label for="month-select">Month</label>
+    <input type="month" id="month-select">
+  </div>
+</header>
+
+<main>
+  <div class="status-line" id="status-line"></div>
+  <div id="results"></div>
+</main>
+
+<script>
+  // ---- Config -------------------------------------------------------
+  // Same secret-in-source pattern already accepted for basement inventory,
+  // pick list, and tax obligations (see T-8). Header Auth on the n8n side
+  // is what actually enforces this, not concealment of this value.
+  const API_KEY = 'tMEUHYnK8aCNccKZ5Zp#oMBazyR3deGM';
+  const API_BASE = 'https://randysmith42.app.n8n.cloud/webhook/reports';
+  // Swap to '/webhook-test/reports' below while testing an unpublished workflow:
+  // const API_BASE = 'https://randysmith42.app.n8n.cloud/webhook-test/reports';
+
+  const monthInput = document.getElementById('month-select');
+  const statusLine = document.getElementById('status-line');
+  const resultsEl = document.getElementById('results');
+
+  function currentMonthValue() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  function monthInputToApiValue(monthInputValue) {
+    // <input type="month"> gives "YYYY-MM" — API expects a full date, first of month.
+    return `${monthInputValue}-01`;
+  }
+
+  function formatTimestamp(ts) {
+    if (!ts) return null;
+    const d = new Date(ts);
+    return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  function statusLabel(status) {
+    const labels = {
+      not_started: 'Not started',
+      draft: 'Ready to review',
+      sent: 'Sent',
+      error: 'Error'
+    };
+    return labels[status] || status;
+  }
+
+  function renderLocations(locations) {
+    resultsEl.innerHTML = '';
+
+    if (!locations || locations.length === 0) {
+      resultsEl.innerHTML = '<div class="empty-state">No active locations returned.</div>';
+      return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'location-grid';
+
+    locations.forEach(loc => {
+      const card = document.createElement('div');
+      card.className = 'location-card';
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+
+      const name = document.createElement('p');
+      name.className = 'location-name';
+      name.textContent = loc.location;
+
+      const badge = document.createElement('span');
+      badge.className = `badge ${loc.status}`;
+      badge.textContent = statusLabel(loc.status);
+
+      const meta = document.createElement('div');
+      meta.className = 'location-meta';
+      if (loc.status === 'sent' && loc.sent_at) {
+        meta.textContent = `Sent ${formatTimestamp(loc.sent_at)}`;
+      } else if (loc.generated_at) {
+        meta.textContent = `Generated ${formatTimestamp(loc.generated_at)}`;
+      }
+
+      card.appendChild(name);
+      card.appendChild(badge);
+      if (meta.textContent) card.appendChild(meta);
+
+      const openReview = () => {
+        // Report review screen isn't built yet — GET/POST /reports/draft
+        // don't exist. This is a placeholder until that endpoint is live.
+        alert(`Review screen not built yet.\n\nLocation: ${loc.location}\nStatus: ${loc.status}\nReport ID: ${loc.report_id ?? 'none'}`);
+      };
+      card.addEventListener('click', openReview);
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openReview();
+        }
+      });
+
+      grid.appendChild(card);
+    });
+
+    resultsEl.appendChild(grid);
+  }
+
+  async function loadReports() {
+    const apiMonth = monthInputToApiValue(monthInput.value);
+    statusLine.className = 'status-line';
+    statusLine.textContent = 'Loading…';
+    resultsEl.innerHTML = '<div class="loading-state">Loading locations…</div>';
+
+    try {
+      const res = await fetch(`${API_BASE}/list?month=${apiMonth}`, {
+        method: 'GET',
+        headers: { 'X-API-Key': API_KEY }
+      });
+
+      if (!res.ok) {
+        const bodyText = await res.text();
+        throw new Error(`${res.status} ${res.statusText} — ${bodyText}`);
+      }
+
+      const locations = await res.json();
+      statusLine.textContent = '';
+      renderLocations(locations);
+    } catch (err) {
+      statusLine.className = 'status-line error';
+      statusLine.textContent = `Couldn't load reports: ${err.message}`;
+      resultsEl.innerHTML = '';
+      console.error(err);
+    }
+  }
+
+  monthInput.value = currentMonthValue();
+  monthInput.addEventListener('change', loadReports);
+  loadReports();
+</script>
+
+</body>
+</html>
