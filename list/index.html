@@ -265,6 +265,24 @@
   .bestseller-category-label { font-weight: 600; font-size: 14px; color: var(--ink); margin: 10px 0 4px; }
   .bestseller-category-label:first-child { margin-top: 0; }
 
+  .tod-summary {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .tod-summary strong { color: var(--ink); font-weight: 700; }
+  .tod-bins { display: flex; flex-direction: column; }
+  .tod-bin-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14px;
+  }
+  .tod-bin-row:last-child { border-bottom: none; }
+  .tod-bin-count { color: var(--ink-soft); }
+  
   .action-row { display: flex; gap: 12px; margin-top: 24px; }
   button.primary, button.secondary {
     font-family: var(--font-body);
@@ -697,6 +715,10 @@
       return renderBestSellersSection(data);
     }
 
+    if (section.section_key === 'time_of_day') {
+      return renderTimeOfDaySection(data);
+    }
+    
     if (Array.isArray(data.items)) {
       const list = document.createElement('ul');
       list.className = 'item-list';
@@ -859,6 +881,41 @@
       wrap.appendChild(note);
     }
   
+    return wrap;
+  }
+
+  function renderTimeOfDaySection(data) {
+    const wrap = document.createElement('div');
+
+    const summary = document.createElement('div');
+    summary.className = 'tod-summary';
+    const total = data.total_transactions ?? 0;
+    summary.innerHTML = `Total monthly transactions: <strong>${total.toLocaleString()}</strong>`;
+    wrap.appendChild(summary);
+
+    const list = document.createElement('div');
+    list.className = 'tod-bins';
+
+    (data.bins || []).forEach(bin => {
+      const row = document.createElement('div');
+      row.className = 'tod-bin-row';
+
+      const label = document.createElement('span');
+      label.textContent = bin.label;
+
+      const value = document.createElement('span');
+      value.textContent = `${bin.pct}% `;
+      const count = document.createElement('span');
+      count.className = 'tod-bin-count';
+      count.textContent = `(${bin.transaction_count})`;
+      value.appendChild(count);
+
+      row.appendChild(label);
+      row.appendChild(value);
+      list.appendChild(row);
+    });
+
+    wrap.appendChild(list);
     return wrap;
   }
   
