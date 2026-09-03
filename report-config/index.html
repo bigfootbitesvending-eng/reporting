@@ -152,6 +152,8 @@
     max-width: 160px;
   }
   .config-select:disabled { opacity: 0.45; background: #F0EEE9; }
+  .config-hint { font-size: 0.72rem; color: var(--ink-soft); margin-top: -0.15rem; }
+  .config-hint.disabled { opacity: 0.45; }
 
   .config-label {
     font-size: 0.68rem;
@@ -247,24 +249,29 @@
     time_of_day: 'Time of Day'
   };
 
-  // ASSUMPTION — not confirmed with Randy. Key name and value set for the
-  // revenue comparison-period selector, and the field key for the
-  // time_of_day bin count. Change here if the real contract differs.
+  function formatTimeBlockHint(value) {
+    const n = parseInt(value, 10);
+    if (!n) return '';
+    const hrs = 24 / n;
+    const hrsLabel = Number.isInteger(hrs) ? String(hrs) : hrs.toFixed(1);
+    return hrsLabel + ' hrs each';
+  }
+  
   const CONFIG_SECTIONS = {
     revenue: {
       key: 'comparison_period',
       label: 'Compare to',
       options: [
-        { value: 'prior_month', label: 'Prior month' },
-        { value: 'same_month_last_year', label: 'Same month last year' }
+        { value: 'prior_month', label: 'Prior month' }
       ],
       default: 'prior_month'
     },
     time_of_day: {
-      key: 'bin_count',
-      label: 'Bins',
+      key: 'block_count',
+      label: 'Time Blocks',
       options: [2, 4, 6, 8, 10, 12].map(n => ({ value: String(n), label: String(n) })),
-      default: '6'
+      default: '6',
+      hint: formatTimeBlockHint
     }
   };
 
@@ -363,14 +370,13 @@
   function sectionCell(location, sectionKey) {
     const cell = document.createElement('td');
     cell.dataset.label = SECTION_LABELS[sectionKey];
-
+  
     const key = rowKey(location, sectionKey);
     const row = configMap[key] || { location, section_key: sectionKey, enabled: true, config: null };
-
+  
     const stack = document.createElement('div');
     stack.className = 'cell-stack';
-
-    // Toggle
+  
     const switchLabel = document.createElement('label');
     switchLabel.className = 'switch';
     const checkbox = document.createElement('input');
@@ -381,24 +387,25 @@
     switchLabel.appendChild(checkbox);
     switchLabel.appendChild(track);
     stack.appendChild(switchLabel);
-
-    // Config field, only for sections that have one
+  
     const configDef = CONFIG_SECTIONS[sectionKey];
     let configSelect = null;
+    let hintEl = null;
+  
     if (configDef) {
       const configLabel = document.createElement('div');
       configLabel.className = 'config-label';
       configLabel.textContent = configDef.label;
       stack.appendChild(configLabel);
-
+  
       configSelect = document.createElement('select');
       configSelect.className = 'config-select';
       configSelect.disabled = !row.enabled;
-
+  
       const currentValue = (row.config && row.config[configDef.key] !== undefined && row.config[configDef.key] !== null)
         ? String(row.config[configDef.key])
         : configDef.default;
-
+  
       for (const opt of configDef.options) {
         const o = document.createElement('option');
         o.value = opt.value;
@@ -407,24 +414,33 @@
         configSelect.appendChild(o);
       }
       stack.appendChild(configSelect);
+  
+      if (configDef.hint) {
+        hintEl = document.createElement('div');
+        hintEl.className = 'config-hint' + (row.enabled ? '' : ' disabled');
+        hintEl.textContent = configDef.hint(currentValue);
+        stack.appendChild(hintEl);
+      }
     }
-
+  
     checkbox.onchange = async () => {
       const enabled = checkbox.checked;
       if (configSelect) configSelect.disabled = !enabled;
+      if (hintEl) hintEl.classList.toggle('disabled', !enabled);
       const config = configDef
         ? { [configDef.key]: configSelect ? configSelect.value : configDef.default }
         : row.config;
       await persist(location, sectionKey, enabled, config, checkbox, !row.enabled);
     };
-
+  
     if (configSelect) {
       configSelect.onchange = async () => {
+        if (hintEl && configDef.hint) hintEl.textContent = configDef.hint(configSelect.value);
         const config = { [configDef.key]: configSelect.value };
         await persist(location, sectionKey, checkbox.checked, config, checkbox, checkbox.checked);
       };
     }
-
+  
     cell.appendChild(stack);
     return cell;
   }
