@@ -661,37 +661,55 @@
       return list;
     }
 
-    // Atomic section — flat key/value grid. Revenue gets friendlier labels;
-    // anything else falls back to the raw field names so new sections aren't invisible.
-    const FRIENDLY_LABELS = {
-      current_revenue: 'Revenue this month',
-      current_daily_rate: 'Daily rate',
-      prior_daily_rate: `Daily rate (${data.comparison_period_label || 'prior period'})`,
-      pct_change: 'Change vs. prior period',
-      days_current: 'Days in period'
+    // Atomic section — nested metric objects ({current, prior, pct_change, ...}).
+    // Explicit key order matches how these should read: Transactions, Items Sold, Revenue.
+    const METRIC_ORDER = ['transactions', 'items_sold', 'revenue'];
+    const METRIC_LABELS = {
+      transactions: 'Transactions',
+      items_sold: 'Items Sold',
+      revenue: 'Revenue'
     };
-    const SKIP_KEYS = new Set(['comparison_period_label', 'prior_revenue', 'days_prior']);
-
+    const CURRENCY_METRICS = new Set(['revenue']);
+    const SKIP_KEYS = new Set(['comparison_period_label']);
+    
+    function isMetricObject(val) {
+      return val && typeof val === 'object' && !Array.isArray(val) && 'current' in val;
+    }
+    
+    function formatMetric(key, metric) {
+      const isCurrency = CURRENCY_METRICS.has(key);
+      const current = isCurrency
+        ? `$${Number(metric.current).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : Number(metric.current).toLocaleString();
+      if (metric.pct_change === null || metric.pct_change === undefined) {
+        return current;
+      }
+      const direction = metric.pct_change < 0 ? 'decrease' : 'increase';
+      const period = data.comparison_period_label || 'prior period';
+      return `${current} (${Math.abs(metric.pct_change)}% ${direction} over ${period})`;
+    }
+    
     const grid = document.createElement('div');
     grid.className = 'data-grid';
-    Object.entries(data).forEach(([key, val]) => {
-      if (SKIP_KEYS.has(key) || val === null || val === undefined) return;
+    
+    const orderedKeys = [...METRIC_ORDER, ...Object.keys(data).filter(k => !METRIC_ORDER.includes(k) && !SKIP_KEYS.has(k))];
+    
+    orderedKeys.forEach(key => {
+      const val = data[key];
+      if (val === null || val === undefined || SKIP_KEYS.has(key)) return;
       const item = document.createElement('div');
       item.className = 'data-item';
       const label = document.createElement('div');
       label.className = 'data-label';
-      label.textContent = FRIENDLY_LABELS[key] || key;
+      label.textContent = METRIC_LABELS[key] || key;
       const value = document.createElement('div');
       value.className = 'data-value';
-      value.textContent = (key === 'pct_change')
-        ? (val === null ? '\u2014' : `${val > 0 ? '+' : ''}${val}%`)
-        : (key.includes('revenue') || key.includes('rate')) ? `$${val}` : val;
+      value.textContent = isMetricObject(val) ? formatMetric(key, val) : String(val);
       item.appendChild(label);
       item.appendChild(value);
       grid.appendChild(item);
     });
     return grid;
-  }
 
   function renderSectionCard(section) {
     const card = document.createElement('div');
