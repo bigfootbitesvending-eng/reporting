@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Report Section Config — Bigfoot Bites</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;700&family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F3F4F1;
+    --ink: #1C2321;
+    --ink-soft: #52605B;
+    --rule: #D7D9D3;
+    --ledger-green: #2F6F5E;
+    --ledger-green-soft: #E4EEEA;
+    --danger: #B3492D;
+    --danger-soft: #F5E4DE;
+    --inactive: #9A8F7D;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 5rem;
+  }
+
+  header {
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 1rem;
+  }
+
+  h1 {
+    font-family: 'Roboto Slab', serif;
+    font-weight: 700;
+    font-size: 1.6rem;
+    margin: 0 0 0.25rem;
+    letter-spacing: -0.01em;
+  }
+
+  .subtitle { color: var(--ink-soft); font-size: 0.9rem; }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .toolbar label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+  }
+
+  select {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    background: #fff;
+    color: var(--ink);
+  }
+  select:focus { outline: 2px solid var(--ledger-green); outline-offset: 1px; }
+
+  .panel {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  thead th {
+    text-align: left;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--rule);
+    background: var(--ledger-green-soft);
+  }
+
+  tbody td {
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+
+  td.location {
+    font-weight: 600;
+    font-family: 'Roboto Slab', serif;
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+
+  .cell-stack { display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+
+  /* Toggle switch */
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 38px;
+    height: 21px;
+    flex-shrink: 0;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch-track {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: #E3E0D7;
+    border-radius: 21px;
+    transition: background 0.15s ease;
+  }
+  .switch-track::before {
+    content: '';
+    position: absolute;
+    height: 15px;
+    width: 15px;
+    left: 3px;
+    top: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  }
+  .switch input:checked + .switch-track { background: var(--ledger-green); }
+  .switch input:checked + .switch-track::before { transform: translateX(17px); }
+  .switch input:focus-visible + .switch-track { outline: 2px solid var(--ledger-green); outline-offset: 2px; }
+  .switch input:disabled + .switch-track { opacity: 0.5; cursor: not-allowed; }
+
+  .config-select {
+    font-size: 0.82rem;
+    padding: 0.3rem 0.4rem;
+    max-width: 160px;
+  }
+  .config-select:disabled { opacity: 0.45; background: #F0EEE9; }
+
+  .config-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--ink-soft);
+  }
+
+  .no-config-note {
+    font-size: 0.78rem;
+    color: var(--inactive);
+  }
+
+  #status-line {
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    margin-top: 0.9rem;
+    min-height: 1.2em;
+  }
+  #status-line.error { color: var(--danger); }
+
+  .empty-state {
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--ink-soft);
+  }
+
+  @media (max-width: 760px) {
+    thead { display: none; }
+    tbody tr { display: block; border-bottom: 2px solid var(--rule); }
+    tbody td { display: block; border-bottom: none; padding: 0.6rem 1rem; }
+    tbody td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--ink-soft);
+      margin-bottom: 0.3rem;
+    }
+    td.location { border-top: 2px solid var(--ink); padding-top: 0.9rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Report Section Config</h1>
+    <div class="subtitle">Turn monthly report sections on or off per location, and set section options.</div>
+  </header>
+
+  <div class="toolbar">
+    <label for="location-filter">Location</label>
+    <select id="location-filter">
+      <option value="">All locations</option>
+    </select>
+  </div>
+
+  <div class="panel">
+    <table id="config-table" style="display:none;">
+      <thead>
+        <tr>
+          <th>Location</th>
+          <th>Best Sellers</th>
+          <th>New Items</th>
+          <th>Revenue</th>
+          <th>Time of Day</th>
+        </tr>
+      </thead>
+      <tbody id="config-body"></tbody>
+    </table>
+    <div class="empty-state" id="empty-state" style="display:none;">
+      <strong>No report config found.</strong>
+    </div>
+  </div>
+
+  <div id="status-line"></div>
+</main>
+
+<script src="/shared/config.js"></script>
+<script>
+  // Set once "Report Config — CRUD API" is pasted into n8n and published.
+  const API_BASE = 'https://randysmith42.app.n8n.cloud/webhook/report-config';
+  const LOCATIONS_API_BASE = 'https://randysmith42.app.n8n.cloud/webhook/locations';
+
+  const SECTION_KEYS = ['best_sellers', 'new_items', 'revenue', 'time_of_day'];
+  const SECTION_LABELS = {
+    best_sellers: 'Best Sellers',
+    new_items: 'New Items',
+    revenue: 'Revenue',
+    time_of_day: 'Time of Day'
+  };
+
+  // ASSUMPTION — not confirmed with Randy. Key name and value set for the
+  // revenue comparison-period selector, and the field key for the
+  // time_of_day bin count. Change here if the real contract differs.
+  const CONFIG_SECTIONS = {
+    revenue: {
+      key: 'comparison_period',
+      label: 'Compare to',
+      options: [
+        { value: 'prior_month', label: 'Prior month' },
+        { value: 'same_month_last_year', label: 'Same month last year' }
+      ],
+      default: 'prior_month'
+    },
+    time_of_day: {
+      key: 'bin_count',
+      label: 'Bins',
+      options: [2, 4, 6, 8, 10, 12].map(n => ({ value: String(n), label: String(n) })),
+      default: '6'
+    }
+  };
+
+  let LOCATIONS = [];
+  let configRows = [];
+  let configMap = {};
+  let selectedLocation = '';
+
+  const tableEl = document.getElementById('config-table');
+  const bodyEl = document.getElementById('config-body');
+  const emptyEl = document.getElementById('empty-state');
+  const statusEl = document.getElementById('status-line');
+  const locationFilterEl = document.getElementById('location-filter');
+
+  function setStatus(message, isError) {
+    statusEl.textContent = message || '';
+    statusEl.className = isError ? 'error' : '';
+  }
+
+  function rowKey(location, sectionKey) {
+    return location + '::' + sectionKey;
+  }
+
+  async function loadLocations() {
+    const res = await fetch(LOCATIONS_API_BASE, { method: 'GET', headers: { 'X-API-Key': API_KEY } });
+    if (!res.ok) throw new Error('Server returned ' + res.status);
+    const data = await res.json();
+    LOCATIONS = data.map(l => l.location);
+    locationFilterEl.innerHTML = '<option value="">All locations</option>';
+    for (const loc of LOCATIONS) {
+      const o = document.createElement('option');
+      o.value = loc;
+      o.textContent = loc;
+      locationFilterEl.appendChild(o);
+    }
+  }
+
+  async function loadConfig() {
+    setStatus('Loading…');
+    try {
+      const res = await fetch(API_BASE, { method: 'GET', headers: { 'X-API-Key': API_KEY } });
+      if (!res.ok) throw new Error('Server returned ' + res.status);
+      configRows = await res.json();
+      configMap = {};
+      for (const row of configRows) {
+        configMap[rowKey(row.location, row.section_key)] = row;
+      }
+      render();
+      setStatus('');
+    } catch (err) {
+      setStatus('Could not load report config — ' + err.message, true);
+    }
+  }
+
+  async function writeConfig(location, sectionKey, enabled, config) {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify({ location, section_key: sectionKey, enabled, config })
+    });
+    if (!res.ok) throw new Error('Server returned ' + res.status);
+    return res.json();
+  }
+
+  function render() {
+    const locationsToShow = selectedLocation ? [selectedLocation] : LOCATIONS;
+
+    if (!locationsToShow.length) {
+      tableEl.style.display = 'none';
+      emptyEl.style.display = 'block';
+      return;
+    }
+
+    tableEl.style.display = 'table';
+    emptyEl.style.display = 'none';
+    bodyEl.innerHTML = '';
+
+    for (const location of locationsToShow) {
+      const tr = document.createElement('tr');
+      tr.appendChild(td('Location', location, 'location'));
+      for (const sectionKey of SECTION_KEYS) {
+        tr.appendChild(sectionCell(location, sectionKey));
+      }
+      bodyEl.appendChild(tr);
+    }
+  }
+
+  function td(label, text, cls) {
+    const cell = document.createElement('td');
+    cell.dataset.label = label;
+    if (cls) cell.className = cls;
+    cell.textContent = text;
+    return cell;
+  }
+
+  function sectionCell(location, sectionKey) {
+    const cell = document.createElement('td');
+    cell.dataset.label = SECTION_LABELS[sectionKey];
+
+    const key = rowKey(location, sectionKey);
+    const row = configMap[key] || { location, section_key: sectionKey, enabled: true, config: null };
+
+    const stack = document.createElement('div');
+    stack.className = 'cell-stack';
+
+    // Toggle
+    const switchLabel = document.createElement('label');
+    switchLabel.className = 'switch';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = !!row.enabled;
+    const track = document.createElement('span');
+    track.className = 'switch-track';
+    switchLabel.appendChild(checkbox);
+    switchLabel.appendChild(track);
+    stack.appendChild(switchLabel);
+
+    // Config field, only for sections that have one
+    const configDef = CONFIG_SECTIONS[sectionKey];
+    let configSelect = null;
+    if (configDef) {
+      const configLabel = document.createElement('div');
+      configLabel.className = 'config-label';
+      configLabel.textContent = configDef.label;
+      stack.appendChild(configLabel);
+
+      configSelect = document.createElement('select');
+      configSelect.className = 'config-select';
+      configSelect.disabled = !row.enabled;
+
+      const currentValue = (row.config && row.config[configDef.key] !== undefined && row.config[configDef.key] !== null)
+        ? String(row.config[configDef.key])
+        : configDef.default;
+
+      for (const opt of configDef.options) {
+        const o = document.createElement('option');
+        o.value = opt.value;
+        o.textContent = opt.label;
+        if (opt.value === currentValue) o.selected = true;
+        configSelect.appendChild(o);
+      }
+      stack.appendChild(configSelect);
+    }
+
+    checkbox.onchange = async () => {
+      const enabled = checkbox.checked;
+      if (configSelect) configSelect.disabled = !enabled;
+      const config = configDef
+        ? { [configDef.key]: configSelect ? configSelect.value : configDef.default }
+        : row.config;
+      await persist(location, sectionKey, enabled, config, checkbox, !row.enabled);
+    };
+
+    if (configSelect) {
+      configSelect.onchange = async () => {
+        const config = { [configDef.key]: configSelect.value };
+        await persist(location, sectionKey, checkbox.checked, config, checkbox, checkbox.checked);
+      };
+    }
+
+    cell.appendChild(stack);
+    return cell;
+  }
+
+  async function persist(location, sectionKey, enabled, config, checkboxEl, revertTo) {
+    setStatus('Saving…');
+    try {
+      const updated = await writeConfig(location, sectionKey, enabled, config);
+      configMap[rowKey(location, sectionKey)] = updated;
+      setStatus('Saved.');
+    } catch (err) {
+      checkboxEl.checked = revertTo;
+      setStatus('Could not save — ' + err.message, true);
+    }
+  }
+
+  locationFilterEl.onchange = () => {
+    selectedLocation = locationFilterEl.value;
+    render();
+  };
+
+  loadLocations()
+    .then(loadConfig)
+    .catch(err => setStatus('Could not load locations — ' + err.message, true));
+</script>
+</body>
+</html>
