@@ -566,12 +566,11 @@
   function progressStepIndex(report) {
     if (report.status === 'error') return -1;
     if (report.status === 'sent') return 3;
-    if (report.status === 'draft') return 2;
-    return 1;
+    return 1; // draft — ready, currently in review
   }
 
   function renderProgressSteps(report) {
-    const labels = ['Data assembled', 'Draft generated', 'Your review', 'Sent'];
+    const labels = ['Draft ready', 'Your review', 'Sent'];
     const current = progressStepIndex(report);
     const wrap = document.createElement('div');
     wrap.className = 'progress-steps';
@@ -882,6 +881,46 @@
     }
   }
 
+  async function approveReport() {
+    if (!currentReport) return;
+    if (!window.confirm('Approve and send this report? This cannot be undone.')) return;
+
+    const approveBtn = document.getElementById('approve-btn');
+    const saveBtn = document.getElementById('save-draft-btn');
+    if (approveBtn) approveBtn.disabled = true;
+    if (saveBtn) saveBtn.disabled = true;
+
+    // Approve sends whatever is currently stored in the database, not
+    // whatever happens to be live in the textareas — save first so the
+    // email can never go out with stale text.
+    const saved = await saveDraft();
+    if (!saved) {
+      showToast('Could not save your edits — send cancelled.', 'error', null);
+      if (approveBtn) approveBtn.disabled = false;
+      if (saveBtn) saveBtn.disabled = false;
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+        body: JSON.stringify({ report_id: currentReport.report_id })
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || `${res.status} ${res.statusText}`);
+
+      currentReport = body;
+      showToast('Report sent.', 'success', 3000);
+      renderReview(currentReport);
+    } catch (err) {
+      showToast(`Couldn't send: ${err.message}`, 'error', null);
+      console.error(err);
+      if (approveBtn) approveBtn.disabled = false;
+      if (saveBtn) saveBtn.disabled = false;
+    }
+  }
+
   function renderReview(report) {
     reviewContent.innerHTML = '';
 
@@ -915,6 +954,17 @@
 
     reviewContent.appendChild(renderTextBlock('Closing', 'closing', report.closing_text, closingRating));
 
+    if (report.status === 'sent') {
+      const sentNote = document.createElement('div');
+      sentNote.className = 'action-note';
+      const sentTime = report.sent_at
+        ? new Date(report.sent_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+        : '';
+      sentNote.textContent = `This report was sent${sentTime ? ' ' + sentTime : ''}.`;
+      reviewContent.appendChild(sentNote);
+      return;
+    }
+
     const actionRow = document.createElement('div');
     actionRow.className = 'action-row';
 
@@ -927,19 +977,14 @@
 
     const approveBtn = document.createElement('button');
     approveBtn.type = 'button';
+    approveBtn.id = 'approve-btn';
     approveBtn.className = 'primary';
     approveBtn.textContent = 'Approve and send';
-    approveBtn.disabled = true;
-    approveBtn.title = 'POST /reports/approve is not built yet';
+    approveBtn.addEventListener('click', approveReport);
 
     actionRow.appendChild(saveBtn);
     actionRow.appendChild(approveBtn);
     reviewContent.appendChild(actionRow);
-
-    const note = document.createElement('div');
-    note.className = 'action-note';
-    note.textContent = 'Approve and send isn\u2019t wired up yet \u2014 that\u2019s next.';
-    reviewContent.appendChild(note);
   }
 
   backBtn.addEventListener('click', () => {
