@@ -261,6 +261,9 @@
   .data-item .data-value { font-size: 16px; font-weight: 600; }
   .item-list { list-style: none; margin: 0; padding: 0; }
   .item-list li { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
+  .bestsellers-list { display: flex; flex-direction: column; gap: 4px; }
+  .bestseller-category-label { font-weight: 600; font-size: 14px; color: var(--ink); margin: 10px 0 4px; }
+  .bestseller-category-label:first-child { margin-top: 0; }
 
   .action-row { display: flex; gap: 12px; margin-top: 24px; }
   button.primary, button.secondary {
@@ -678,6 +681,10 @@
       return renderRevenueSection(data);
     }
 
+    if (section.section_key === 'best_sellers') {
+      return renderBestSellersSection(data);
+    }
+
     if (Array.isArray(data.items)) {
       const list = document.createElement('ul');
       list.className = 'item-list';
@@ -783,6 +790,64 @@
     return wrap;
   }
 
+  function renderBestSellersSection(data) {
+    const wrap = document.createElement('div');
+    const items = data.items || [];
+    const flags = data.data_quality_flags || [];
+  
+    if (items.length === 0) {
+      const p = document.createElement('p');
+      p.className = 'section-empty';
+      p.textContent = 'No category winners for this period.';
+      wrap.appendChild(p);
+      return wrap;
+    }
+  
+    // Items arrive pre-grouped by category — Assemble Output sorts alphabetically
+    // and keeps tied items adjacent under the same category — so a single pass
+    // through the array is enough, no re-grouping needed here.
+    const list = document.createElement('div');
+    list.className = 'bestsellers-list';
+  
+    let currentCategory = null;
+    let categoryGroup = null;
+  
+    items.forEach((item) => {
+      if (item.category !== currentCategory) {
+        currentCategory = item.category;
+        const catLabel = document.createElement('div');
+        catLabel.className = 'bestseller-category-label';
+        catLabel.textContent = item.category;
+        list.appendChild(catLabel);
+        categoryGroup = document.createElement('ul');
+        categoryGroup.className = 'item-list';
+        list.appendChild(categoryGroup);
+      }
+  
+      const li = document.createElement('li');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = item.included !== false;
+      checkbox.addEventListener('change', () => { item.included = checkbox.checked; });
+      const label = document.createElement('span');
+      label.textContent = item.tied ? `${item.product_name} (tied)` : item.product_name;
+      li.appendChild(checkbox);
+      li.appendChild(label);
+      categoryGroup.appendChild(li);
+    });
+  
+    wrap.appendChild(list);
+  
+    if (flags.length > 0) {
+      const note = document.createElement('div');
+      note.className = 'action-note';
+      note.textContent = `Data quality note: ${flags.length} item${flags.length > 1 ? 's' : ''} sold with no recorded price this period — ${flags.map(f => f.product_name).join(', ')}.`;
+      wrap.appendChild(note);
+    }
+  
+    return wrap;
+  }
+  
   function renderSectionCard(section) {
     const card = document.createElement('div');
     card.className = 'section-card';
