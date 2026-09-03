@@ -830,7 +830,9 @@
       checkbox.checked = item.included !== false;
       checkbox.addEventListener('change', () => { item.included = checkbox.checked; });
       const label = document.createElement('span');
-      label.textContent = item.tied ? `${item.product_name} (tied)` : item.product_name;
+      const unitsLabel = item.units_sold === 1 ? '1 unit' : `${item.units_sold} units`;
+      const tiedLabel = item.tied ? ' (tied)' : '';
+      label.textContent = `${item.product_name} — ${unitsLabel}${tiedLabel}`;
       li.appendChild(checkbox);
       li.appendChild(label);
       categoryGroup.appendChild(li);
