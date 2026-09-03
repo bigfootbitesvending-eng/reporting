@@ -271,18 +271,33 @@
     margin-bottom: 12px;
   }
   .tod-summary strong { color: var(--ink); font-weight: 700; }
-  .tod-bins { display: flex; flex-direction: column; }
-  .tod-bin-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 6px 0;
-    border-bottom: 1px solid var(--rule);
-    font-size: 14px;
+  .tod-heatmap-wrap { overflow-x: auto; }
+  .tod-heatmap-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
   }
-  .tod-bin-row:last-child { border-bottom: none; }
-  .tod-bin-count { color: var(--ink-soft); }
-  
+  .tod-heatmap-table th {
+    padding: 6px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-align: center;
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  .tod-heatmap-table td {
+    padding: 8px;
+    text-align: center;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .tod-day-label {
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+  }
   .action-row { display: flex; gap: 12px; margin-top: 24px; }
   button.primary, button.secondary {
     font-family: var(--font-body);
@@ -884,40 +899,87 @@
     return wrap;
   }
 
-  function renderTimeOfDaySection(data) {
-    const wrap = document.createElement('div');
+  function getHeatmapColor(intensity) {
+  const cream = [250, 238, 218];  // #FAEEDA
+  const amber = [239, 159, 39];   // #EF9F27
+  const coral = [216, 90, 48];    // #D85A30
+  const lerp = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+  const rgb = intensity <= 0.5
+    ? lerp(cream, amber, intensity / 0.5)
+    : lerp(amber, coral, (intensity - 0.5) / 0.5);
+  return '#' + rgb.map(x => x.toString(16).padStart(2, '0')).join('');
+}
 
-    const summary = document.createElement('div');
-    summary.className = 'tod-summary';
-    const total = data.total_transactions ?? 0;
-    summary.innerHTML = `Total monthly transactions: <strong>${total.toLocaleString()}</strong>`;
-    wrap.appendChild(summary);
+function getHeatmapTextColor(intensity) {
+  return intensity < 0.55 ? '#633806' : '#FAE5C8';
+}
 
-    const list = document.createElement('div');
-    list.className = 'tod-bins';
+function renderTimeOfDaySection(data) {
+  const wrap = document.createElement('div');
 
-    (data.bins || []).forEach(bin => {
-      const row = document.createElement('div');
-      row.className = 'tod-bin-row';
+  const summary = document.createElement('div');
+  summary.className = 'tod-summary';
+  const total = data.total_transactions ?? 0;
+  summary.innerHTML = `Total monthly transactions: <strong>${total.toLocaleString()}</strong>`;
+  wrap.appendChild(summary);
 
-      const label = document.createElement('span');
-      label.textContent = bin.label;
-
-      const value = document.createElement('span');
-      value.textContent = `${bin.pct}% `;
-      const count = document.createElement('span');
-      count.className = 'tod-bin-count';
-      count.textContent = `(${bin.transaction_count})`;
-      value.appendChild(count);
-
-      row.appendChild(label);
-      row.appendChild(value);
-      list.appendChild(row);
-    });
-
-    wrap.appendChild(list);
+  const bins = data.bins || [];
+  const heatmap = data.heatmap || [];
+  if (bins.length === 0 || heatmap.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'section-empty';
+    empty.textContent = 'No time-of-day data available for this period.';
+    wrap.appendChild(empty);
     return wrap;
   }
+
+  const allValues = heatmap.flatMap(row => row.cells.map(c => c.avg_transactions));
+  const maxValue = Math.max(...allValues, 0);
+
+  const tableWrap = document.createElement('div');
+  tableWrap.className = 'tod-heatmap-wrap';
+
+  const table = document.createElement('table');
+  table.className = 'tod-heatmap-table';
+
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  headerRow.appendChild(document.createElement('th')); // blank corner cell, above day labels
+  bins.forEach(bin => {
+    const th = document.createElement('th');
+    th.textContent = bin.label;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  heatmap.forEach(row => {
+    const tr = document.createElement('tr');
+
+    const dayCell = document.createElement('td');
+    dayCell.className = 'tod-day-label';
+    dayCell.textContent = row.day_short;
+    tr.appendChild(dayCell);
+
+    row.cells.forEach(cell => {
+      const td = document.createElement('td');
+      const intensity = maxValue > 0 ? cell.avg_transactions / maxValue : 0;
+      td.style.backgroundColor = getHeatmapColor(intensity);
+      td.style.color = getHeatmapTextColor(intensity);
+      td.textContent = cell.avg_transactions;
+      td.title = `${row.day} — ${bins[cell.bin_index].label}: ${cell.avg_transactions} avg transactions`;
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  tableWrap.appendChild(table);
+  wrap.appendChild(tableWrap);
+
+  return wrap;
+}
   
   function renderSectionCard(section) {
     const card = document.createElement('div');
