@@ -4,34 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Monthly Reports — Bigfoot Bites</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/styles.css">
 <style>
-  :root {
-    --bg: #f7f6f3;
-    --card-bg: #ffffff;
-    --border: #ddd8cf;
-    --text: #2b2a27;
-    --text-muted: #75716a;
-    --accent: #3a5a40;
-    --status-not-started: #b8b2a5;
-    --status-draft: #c98a2c;
-    --status-sent: #3a7d44;
-    --status-error: #b23b3b;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
+  /* Page-specific component styles. Colors/fonts reference the shared
+     tokens from /shared/styles.css rather than redefining a palette. */
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 32px 48px;
   }
   header {
-    padding: 24px 32px 20px;
-    border-bottom: 1px solid var(--border);
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 3rem 1.25rem 1rem;
+    border-bottom: 2px solid var(--ink);
   }
   h1 {
-    font-size: 20px;
-    font-weight: 600;
-    margin: 0 0 14px;
+    font-size: 1.6rem;
+    margin-bottom: 1rem;
   }
   .month-control {
     display: flex;
@@ -45,69 +37,70 @@
     align-items: center;
     justify-content: center;
     font-size: 16px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: var(--card-bg);
-    color: var(--text);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ink);
     cursor: pointer;
     line-height: 1;
   }
   .month-nav-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
+    border-color: var(--ledger-green);
+    color: var(--ledger-green);
   }
   .month-label {
+    font-family: var(--font-display);
+    font-weight: 700;
     font-size: 17px;
-    font-weight: 600;
     min-width: 150px;
     text-align: center;
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 4px 8px;
   }
+  .month-label:hover, .month-label:focus-visible {
+    background: var(--ledger-green-soft);
+    outline: none;
+  }
+  /* The native date input still does the real work (opening the
+     picker for jump-to-arbitrary-month), but stays visually hidden.
+     The label is now the one control users see, instead of two
+     widgets competing for the same job. */
   input[type="month"] {
-    font-size: 13px;
-    padding: 5px 7px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: var(--card-bg);
-    color: var(--text-muted);
-    margin-left: 4px;
-  }
-  main {
-    padding: 24px 32px 48px;
-    max-width: 900px;
-    margin: 0 auto;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
   }
   .status-line {
     font-size: 13px;
-    color: var(--text-muted);
+    color: var(--ink-soft);
     margin-bottom: 16px;
     min-height: 18px;
   }
-  .status-line.error {
-    color: var(--status-error);
-  }
+  .status-line.error { color: var(--status-error); }
+
   .location-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 12px;
   }
   .location-card {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--ledger-green);
     border-radius: 6px;
-    padding: 16px;
+    padding: 1.1rem 1.25rem;
     cursor: pointer;
-    transition: border-color 0.15s ease;
+    transition: background 0.15s ease;
   }
-  .location-card:hover {
-    border-color: var(--accent);
-  }
-  .location-card:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
+  .location-card:hover { background: var(--ledger-green-soft); }
+  .location-card:focus-visible { outline: 2px solid var(--ledger-green); outline-offset: 2px; }
   .location-name {
-    font-size: 15px;
-    font-weight: 600;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.05rem;
     margin: 0 0 8px;
   }
   .badge {
@@ -125,12 +118,12 @@
   .location-meta {
     margin-top: 8px;
     font-size: 12px;
-    color: var(--text-muted);
+    color: var(--ink-soft);
   }
   .empty-state, .loading-state {
     padding: 40px 0;
     text-align: center;
-    color: var(--text-muted);
+    color: var(--ink-soft);
     font-size: 14px;
   }
 
@@ -138,54 +131,36 @@
   .back-btn {
     background: none;
     border: none;
-    color: var(--text-muted);
+    color: var(--ink-soft);
+    font-family: var(--font-body);
     font-size: 13px;
     cursor: pointer;
     padding: 0;
     margin-bottom: 16px;
   }
-  .back-btn:hover { color: var(--accent); }
+  .back-btn:hover { color: var(--ledger-green); }
 
-  .review-header {
-    margin-bottom: 20px;
-  }
-  .review-header h2 {
-    margin: 0 0 4px;
-    font-size: 19px;
-  }
-  .review-header .review-sub {
-    font-size: 13px;
-    color: var(--text-muted);
-  }
+  .review-header { margin-bottom: 20px; }
+  .review-header h2 { font-size: 1.3rem; margin-bottom: 4px; }
+  .review-header .review-sub { font-size: 13px; color: var(--ink-soft); }
 
-  .progress-steps {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 24px;
-  }
+  .progress-steps { display: flex; gap: 4px; margin-bottom: 24px; }
   .progress-step {
     flex: 1;
     text-align: center;
     padding: 8px 4px;
     font-size: 11px;
     font-weight: 600;
-    color: var(--text-muted);
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 4px;
+    color: var(--ink-soft);
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
   }
-  .progress-step.done {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-  }
-  .progress-step.current {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
+  .progress-step.done { background: var(--ledger-green); color: #fff; border-color: var(--ledger-green); }
+  .progress-step.current { border-color: var(--ledger-green); color: var(--ledger-green); }
 
   .error-banner {
-    background: #fbeaea;
+    background: var(--status-error-soft);
     border: 1px solid var(--status-error);
     color: var(--status-error);
     border-radius: 6px;
@@ -194,153 +169,93 @@
     margin-bottom: 16px;
   }
 
-  .text-block {
-    margin-bottom: 20px;
-  }
+  .text-block { margin-bottom: 20px; }
   .text-block .block-label {
     font-size: 12px;
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--ink-soft);
     margin-bottom: 6px;
   }
-  .text-block-inner {
-    border-left: 4px solid var(--accent);
-    padding-left: 14px;
-  }
+  .text-block-inner { border-left: 4px solid var(--ledger-green); padding-left: 14px; }
   textarea {
     width: 100%;
     min-height: 110px;
-    font: inherit;
+    font-family: var(--font-body);
     font-size: 14px;
     padding: 10px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
     resize: vertical;
-    background: var(--card-bg);
-    color: var(--text);
+    background: #fff;
+    color: var(--ink);
   }
-  .thumbs {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 8px;
-  }
+  .thumbs { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
   .thumb-btn {
     width: 30px;
     height: 30px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: var(--card-bg);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    background: #fff;
     cursor: pointer;
     font-size: 14px;
   }
   .thumb-btn.active-up { background: var(--status-sent); color: #fff; border-color: var(--status-sent); }
   .thumb-btn.active-down { background: var(--status-error); color: #fff; border-color: var(--status-error); }
-  .notes-field {
-    display: none;
-    margin-top: 8px;
-    width: 100%;
-    min-height: 60px;
-    font-size: 13px;
-  }
+  .notes-field { display: none; margin-top: 8px; width: 100%; min-height: 60px; font-size: 13px; }
   .notes-field.visible { display: block; }
 
   .section-card {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
+    background: #fff;
+    border: 1px solid var(--rule);
     border-radius: 6px;
     padding: 14px 16px;
     margin-bottom: 10px;
   }
-  .section-card.is-skipped {
-    opacity: 0.55;
-  }
+  .section-card.is-skipped { opacity: 0.55; }
   .section-card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 8px;
   }
-  .section-card-header h3 {
-    margin: 0;
-    font-size: 14px;
-  }
+  .section-card-header h3 { font-size: 14px; }
   .skip-btn {
+    font-family: var(--font-body);
     font-size: 12px;
     font-weight: 600;
     padding: 4px 10px;
-    border-radius: 4px;
-    border: 1px solid var(--border);
+    border-radius: 6px;
+    border: 1px solid var(--rule);
     cursor: pointer;
     background: var(--status-not-started);
     color: #fff;
   }
-  .skip-btn.is-skipped {
-    background: var(--accent);
-    border-color: var(--accent);
-  }
-  .section-empty {
-    font-size: 13px;
-    color: var(--text-muted);
-  }
+  .skip-btn.is-skipped { background: var(--ledger-green); border-color: var(--ledger-green); }
+  .section-empty { font-size: 13px; color: var(--ink-soft); }
   .data-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 12px;
   }
-  .data-item .data-label {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-bottom: 2px;
-  }
-  .data-item .data-value {
-    font-size: 16px;
-    font-weight: 600;
-  }
-  .item-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  .item-list li {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 0;
-    font-size: 13px;
-  }
+  .data-item .data-label { font-size: 11px; color: var(--ink-soft); margin-bottom: 2px; }
+  .data-item .data-value { font-size: 16px; font-weight: 600; }
+  .item-list { list-style: none; margin: 0; padding: 0; }
+  .item-list li { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
 
-  .action-row {
-    display: flex;
-    gap: 12px;
-    margin-top: 24px;
-  }
+  .action-row { display: flex; gap: 12px; margin-top: 24px; }
   button.primary, button.secondary {
+    font-family: var(--font-body);
     font-size: 14px;
     font-weight: 600;
     padding: 10px 20px;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
   }
-  button.primary {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-  }
-  button.secondary {
-    background: var(--card-bg);
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
-  button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  .action-note {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 8px;
-  }
+  button.primary { background: var(--ledger-green); color: #fff; border: none; }
+  button.secondary { background: #fff; color: var(--ink); border: 1px solid var(--rule); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .action-note { font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+  .action-note.error { color: var(--status-error); }
 </style>
 </head>
 <body>
@@ -349,7 +264,7 @@
   <h1>Monthly Reports</h1>
   <div class="month-control">
     <button type="button" class="month-nav-btn" id="prev-month" aria-label="Previous month">‹</button>
-    <span class="month-label" id="month-label"></span>
+    <span class="month-label" id="month-label" role="button" tabindex="0" title="Click to jump to a specific month"></span>
     <button type="button" class="month-nav-btn" id="next-month" aria-label="Next month">›</button>
     <input type="month" id="month-select" aria-label="Jump to specific month">
   </div>
@@ -367,13 +282,10 @@
     <div id="review-content"></div>
   </section>
 </main>
-  
+
 <script src="/shared/config.js"></script>
 <script>
-  // ---- Config -------------------------------------------------------
-  // Same secret-in-source pattern already accepted for basement inventory,
-  // pick list, and tax obligations (see T-8). Header Auth on the n8n side
-  // is what actually enforces this, not concealment of this value.
+  // API_KEY comes from /shared/config.js (const API_KEY = '...').
   const API_BASE = 'https://randysmith42.app.n8n.cloud/webhook/reports';
   // Swap to '/webhook-test/reports' below while testing an unpublished workflow:
   // const API_BASE = 'https://randysmith42.app.n8n.cloud/webhook-test/reports';
@@ -421,6 +333,13 @@
     monthInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     updateMonthLabel();
     loadReports();
+  }
+
+  function openMonthPicker() {
+    if (typeof monthInput.showPicker === 'function') {
+      try { monthInput.showPicker(); return; } catch (e) { /* fall through to focus */ }
+    }
+    monthInput.focus();
   }
 
   // ---- View switching -------------------------------------------------
@@ -550,7 +469,7 @@
   function progressStepIndex(report) {
     if (report.status === 'error') return -1;
     if (report.status === 'sent') return 3;
-    if (report.status === 'draft') return 2; // draft generated, currently in review
+    if (report.status === 'draft') return 2;
     return 1;
   }
 
@@ -603,6 +522,7 @@
     downBtn.setAttribute('aria-label', 'Thumbs down');
 
     const notesField = document.createElement('textarea');
+    notesField.id = `${fieldKey}-notes`;
     notesField.className = 'notes-field';
     notesField.placeholder = 'What was wrong with this? (optional)';
     notesField.value = (fieldKey === 'opening' ? currentReport.opening_notes : currentReport.closing_notes) || '';
@@ -646,7 +566,7 @@
     if (Array.isArray(data.items)) {
       const list = document.createElement('ul');
       list.className = 'item-list';
-      data.items.forEach((item, i) => {
+      data.items.forEach((item) => {
         const li = document.createElement('li');
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -661,50 +581,29 @@
       return list;
     }
 
-    // Atomic section — nested metric objects ({current, prior, pct_change, ...}).
-    // Explicit key order matches how these should read: Transactions, Items Sold, Revenue.
-    const METRIC_ORDER = ['transactions', 'items_sold', 'revenue'];
-    const METRIC_LABELS = {
-      transactions: 'Transactions',
-      items_sold: 'Items Sold',
-      revenue: 'Revenue'
+    const FRIENDLY_LABELS = {
+      current_revenue: 'Revenue this month',
+      current_daily_rate: 'Daily rate',
+      prior_daily_rate: `Daily rate (${data.comparison_period_label || 'prior period'})`,
+      pct_change: 'Change vs. prior period',
+      days_current: 'Days in period'
     };
-    const CURRENCY_METRICS = new Set(['revenue']);
-    const SKIP_KEYS = new Set(['comparison_period_label']);
-    
-    function isMetricObject(val) {
-      return val && typeof val === 'object' && !Array.isArray(val) && 'current' in val;
-    }
-    
-    function formatMetric(key, metric) {
-      const isCurrency = CURRENCY_METRICS.has(key);
-      const current = isCurrency
-        ? `$${Number(metric.current).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-        : Number(metric.current).toLocaleString();
-      if (metric.pct_change === null || metric.pct_change === undefined) {
-        return current;
-      }
-      const direction = metric.pct_change < 0 ? 'decrease' : 'increase';
-      const period = data.comparison_period_label || 'prior period';
-      return `${current} (${Math.abs(metric.pct_change)}% ${direction} over ${period})`;
-    }
-    
+    const SKIP_KEYS = new Set(['comparison_period_label', 'prior_revenue', 'days_prior']);
+
     const grid = document.createElement('div');
     grid.className = 'data-grid';
-    
-    const orderedKeys = [...METRIC_ORDER, ...Object.keys(data).filter(k => !METRIC_ORDER.includes(k) && !SKIP_KEYS.has(k))];
-    
-    orderedKeys.forEach(key => {
-      const val = data[key];
-      if (val === null || val === undefined || SKIP_KEYS.has(key)) return;
+    Object.entries(data).forEach(([key, val]) => {
+      if (SKIP_KEYS.has(key) || val === null || val === undefined) return;
       const item = document.createElement('div');
       item.className = 'data-item';
       const label = document.createElement('div');
       label.className = 'data-label';
-      label.textContent = METRIC_LABELS[key] || key;
+      label.textContent = FRIENDLY_LABELS[key] || key;
       const value = document.createElement('div');
       value.className = 'data-value';
-      value.textContent = isMetricObject(val) ? formatMetric(key, val) : String(val);
+      value.textContent = (key === 'pct_change')
+        ? (val === null ? '\u2014' : `${val > 0 ? '+' : ''}${val}%`)
+        : (key.includes('revenue') || key.includes('rate')) ? `$${val}` : val;
       item.appendChild(label);
       item.appendChild(value);
       grid.appendChild(item);
@@ -733,13 +632,74 @@
       } else {
         skippedSections.add(section.section_key);
       }
-      renderReview(currentReport);
+      // Mirrors pick-list.html: commit this action immediately rather than
+      // batching it behind a separate Save click. Updating just this card's
+      // DOM (not a full renderReview()) also means any in-progress opening/
+      // closing text edits never get discarded — saveDraft() reads whatever
+      // is currently live in the textareas, so nothing is lost either way.
+      const nowSkipped = skippedSections.has(section.section_key);
+      card.classList.toggle('is-skipped', nowSkipped);
+      skipBtn.classList.toggle('is-skipped', nowSkipped);
+      skipBtn.textContent = nowSkipped ? 'Include' : 'Skip';
+      skipBtn.disabled = true;
+      saveDraft().finally(() => { skipBtn.disabled = false; });
     });
     header.appendChild(h3);
     header.appendChild(skipBtn);
     card.appendChild(header);
     card.appendChild(renderSectionBody(section));
     return card;
+  }
+
+  async function saveDraft() {
+    if (!currentReport) return;
+    const saveStatusLine = document.getElementById('save-status-line');
+    const saveBtn = document.getElementById('save-draft-btn');
+    saveStatusLine.className = 'action-note';
+    saveStatusLine.textContent = 'Saving…';
+    saveBtn.disabled = true;
+
+    const openingNotesEl = document.getElementById('opening-notes');
+    const closingNotesEl = document.getElementById('closing-notes');
+
+    const payload = {
+      report_id: currentReport.report_id,
+      opening_text: document.getElementById('opening-textarea').value,
+      closing_text: document.getElementById('closing-textarea').value,
+      opening_rating: openingRating,
+      opening_notes: openingNotesEl ? (openingNotesEl.value || null) : null,
+      closing_rating: closingRating,
+      closing_notes: closingNotesEl ? (closingNotesEl.value || null) : null,
+      sections_skipped: Array.from(skippedSections),
+      sections_data: currentReport.sections
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/draft`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+        body: JSON.stringify(payload)
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || `${res.status} ${res.statusText}`);
+
+      currentReport = body;
+      skippedSections = new Set(body.sections_skipped || []);
+      openingRating = body.opening_rating;
+      closingRating = body.closing_rating;
+
+      saveStatusLine.className = 'action-note';
+      saveStatusLine.textContent = 'Draft saved.';
+      setTimeout(() => {
+        if (saveStatusLine.textContent === 'Draft saved.') saveStatusLine.textContent = '';
+      }, 3000);
+    } catch (err) {
+      saveStatusLine.className = 'action-note error';
+      saveStatusLine.textContent = `Couldn't save: ${err.message}`;
+      console.error(err);
+    } finally {
+      saveBtn.disabled = false;
+    }
   }
 
   function renderReview(report) {
@@ -777,25 +737,33 @@
 
     const actionRow = document.createElement('div');
     actionRow.className = 'action-row';
+
     const saveBtn = document.createElement('button');
     saveBtn.type = 'button';
+    saveBtn.id = 'save-draft-btn';
     saveBtn.className = 'secondary';
     saveBtn.textContent = 'Save draft';
-    saveBtn.disabled = true;
-    saveBtn.title = 'POST /reports/draft is not built yet';
+    saveBtn.addEventListener('click', saveDraft);
+
     const approveBtn = document.createElement('button');
     approveBtn.type = 'button';
     approveBtn.className = 'primary';
     approveBtn.textContent = 'Approve and send';
     approveBtn.disabled = true;
     approveBtn.title = 'POST /reports/approve is not built yet';
+
     actionRow.appendChild(saveBtn);
     actionRow.appendChild(approveBtn);
     reviewContent.appendChild(actionRow);
 
+    const saveStatusLine = document.createElement('div');
+    saveStatusLine.id = 'save-status-line';
+    saveStatusLine.className = 'action-note';
+    reviewContent.appendChild(saveStatusLine);
+
     const note = document.createElement('div');
     note.className = 'action-note';
-    note.textContent = 'Save and Approve aren\u2019t wired up yet \u2014 edits, skip toggles, and ratings on this screen aren\u2019t persisted until those endpoints are built.';
+    note.textContent = 'Approve and send isn\u2019t wired up yet \u2014 that\u2019s next.';
     reviewContent.appendChild(note);
   }
 
@@ -811,6 +779,10 @@
   monthInput.addEventListener('change', () => { updateMonthLabel(); loadReports(); });
   prevBtn.addEventListener('click', () => shiftMonth(-1));
   nextBtn.addEventListener('click', () => shiftMonth(1));
+  monthLabel.addEventListener('click', openMonthPicker);
+  monthLabel.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMonthPicker(); }
+  });
   loadReports();
 </script>
 
