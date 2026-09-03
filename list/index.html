@@ -256,6 +256,44 @@
   button:disabled { opacity: 0.5; cursor: not-allowed; }
   .action-note { font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
   .action-note.error { color: var(--status-error); }
+
+  .toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 280px;
+    max-width: 90vw;
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    z-index: 1000;
+    animation: toast-in 0.15s ease-out;
+  }
+  .toast.success { background: var(--status-sent); }
+  .toast.error { background: var(--status-error); }
+  .toast-dismiss {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translate(-50%, -10px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
 </style>
 </head>
 <body>
@@ -282,6 +320,8 @@
     <div id="review-content"></div>
   </section>
 </main>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="/shared/config.js"></script>
 <script>
@@ -340,6 +380,41 @@
       try { monthInput.showPicker(); return; } catch (e) { /* fall through to focus */ }
     }
     monthInput.focus();
+  }
+
+  // ---- Toast notifications -------------------------------------------
+  // Errors stay on screen until dismissed — a save failure is not
+  // something that should be allowed to quietly scroll out of view.
+  // Success auto-dismisses since it needs acknowledgment, not action.
+
+  let toastTimeout = null;
+
+  function showToast(message, type, autoDismissMs) {
+    const toast = document.getElementById('toast');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = '';
+
+    const msg = document.createElement('span');
+    msg.textContent = message;
+    toast.appendChild(msg);
+
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.className = 'toast-dismiss';
+    dismiss.setAttribute('aria-label', 'Dismiss');
+    dismiss.textContent = '\u00D7';
+    dismiss.addEventListener('click', hideToast);
+    toast.appendChild(dismiss);
+
+    toast.hidden = false;
+
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = autoDismissMs ? setTimeout(hideToast, autoDismissMs) : null;
+  }
+
+  function hideToast() {
+    document.getElementById('toast').hidden = true;
+    if (toastTimeout) { clearTimeout(toastTimeout); toastTimeout = null; }
   }
 
   // ---- View switching -------------------------------------------------
@@ -627,22 +702,35 @@
     if (isSkipped) skipBtn.classList.add('is-skipped');
     skipBtn.textContent = isSkipped ? 'Include' : 'Skip';
     skipBtn.addEventListener('click', () => {
-      if (skippedSections.has(section.section_key)) {
+      const wasSkipped = skippedSections.has(section.section_key);
+      if (wasSkipped) {
         skippedSections.delete(section.section_key);
       } else {
         skippedSections.add(section.section_key);
       }
+      const nowSkipped = !wasSkipped;
+
       // Mirrors pick-list.html: commit this action immediately rather than
       // batching it behind a separate Save click. Updating just this card's
       // DOM (not a full renderReview()) also means any in-progress opening/
       // closing text edits never get discarded — saveDraft() reads whatever
       // is currently live in the textareas, so nothing is lost either way.
-      const nowSkipped = skippedSections.has(section.section_key);
       card.classList.toggle('is-skipped', nowSkipped);
       skipBtn.classList.toggle('is-skipped', nowSkipped);
       skipBtn.textContent = nowSkipped ? 'Include' : 'Skip';
       skipBtn.disabled = true;
-      saveDraft().finally(() => { skipBtn.disabled = false; });
+
+      saveDraft().then(success => {
+        if (!success) {
+          // Save failed — revert the toggle so the screen never shows a
+          // state that wasn't actually persisted.
+          if (nowSkipped) skippedSections.delete(section.section_key);
+          else skippedSections.add(section.section_key);
+          card.classList.toggle('is-skipped', wasSkipped);
+          skipBtn.classList.toggle('is-skipped', wasSkipped);
+          skipBtn.textContent = wasSkipped ? 'Include' : 'Skip';
+        }
+      }).finally(() => { skipBtn.disabled = false; });
     });
     header.appendChild(h3);
     header.appendChild(skipBtn);
@@ -652,12 +740,9 @@
   }
 
   async function saveDraft() {
-    if (!currentReport) return;
-    const saveStatusLine = document.getElementById('save-status-line');
+    if (!currentReport) return false;
     const saveBtn = document.getElementById('save-draft-btn');
-    saveStatusLine.className = 'action-note';
-    saveStatusLine.textContent = 'Saving…';
-    saveBtn.disabled = true;
+    if (saveBtn) saveBtn.disabled = true;
 
     const openingNotesEl = document.getElementById('opening-notes');
     const closingNotesEl = document.getElementById('closing-notes');
@@ -688,17 +773,14 @@
       openingRating = body.opening_rating;
       closingRating = body.closing_rating;
 
-      saveStatusLine.className = 'action-note';
-      saveStatusLine.textContent = 'Draft saved.';
-      setTimeout(() => {
-        if (saveStatusLine.textContent === 'Draft saved.') saveStatusLine.textContent = '';
-      }, 3000);
+      showToast('Draft saved.', 'success', 2500);
+      return true;
     } catch (err) {
-      saveStatusLine.className = 'action-note error';
-      saveStatusLine.textContent = `Couldn't save: ${err.message}`;
+      showToast(`Couldn't save: ${err.message}`, 'error', null);
       console.error(err);
+      return false;
     } finally {
-      saveBtn.disabled = false;
+      if (saveBtn) saveBtn.disabled = false;
     }
   }
 
@@ -755,11 +837,6 @@
     actionRow.appendChild(saveBtn);
     actionRow.appendChild(approveBtn);
     reviewContent.appendChild(actionRow);
-
-    const saveStatusLine = document.createElement('div');
-    saveStatusLine.id = 'save-status-line';
-    saveStatusLine.className = 'action-note';
-    reviewContent.appendChild(saveStatusLine);
 
     const note = document.createElement('div');
     note.className = 'action-note';
