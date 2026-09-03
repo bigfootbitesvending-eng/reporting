@@ -382,6 +382,16 @@
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }
 
+  // The current calendar month is always in-progress and its data is incomplete —
+  // showing it invites confusion ("why does September look empty/wrong?"). The last
+  // navigable month is always the one just before the real current month; it becomes
+  // available automatically the moment the calendar rolls over, no manual update needed.
+  function maxAllowedMonthValue() {
+    const now = new Date();
+    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
   function monthInputToApiValue(monthInputValue) {
     return `${monthInputValue}-01`;
   }
@@ -389,12 +399,14 @@
   function updateMonthLabel() {
     const [year, month] = monthInput.value.split('-').map(Number);
     monthLabel.textContent = `${MONTH_NAMES[month - 1]} ${year}`;
+    nextBtn.disabled = monthInput.value >= maxAllowedMonthValue();
   }
 
   function shiftMonth(delta) {
     const [year, month] = monthInput.value.split('-').map(Number);
     const d = new Date(year, month - 1 + delta, 1);
-    monthInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const candidate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    monthInput.value = candidate > maxAllowedMonthValue() ? maxAllowedMonthValue() : candidate;
     updateMonthLabel();
     loadReports();
   }
@@ -1061,9 +1073,16 @@
 
   // ---- Init ---------------------------------------------------------
 
-  monthInput.value = currentMonthValue();
+  monthInput.max = maxAllowedMonthValue();
+  monthInput.value = maxAllowedMonthValue();
   updateMonthLabel();
-  monthInput.addEventListener('change', () => { updateMonthLabel(); loadReports(); });
+  monthInput.addEventListener('change', () => {
+    // The max attribute should stop this in every modern browser's native picker,
+    // but clamp explicitly rather than trust that alone.
+    if (monthInput.value > maxAllowedMonthValue()) monthInput.value = maxAllowedMonthValue();
+    updateMonthLabel();
+    loadReports();
+  });
   prevBtn.addEventListener('click', () => shiftMonth(-1));
   nextBtn.addEventListener('click', () => shiftMonth(1));
   monthLabel.addEventListener('click', openMonthPicker);
