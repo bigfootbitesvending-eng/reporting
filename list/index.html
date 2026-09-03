@@ -232,6 +232,26 @@
   }
   .skip-btn.is-skipped { background: var(--ledger-green); border-color: var(--ledger-green); }
   .section-empty { font-size: 13px; color: var(--ink-soft); }
+  .comparison-label { font-size: 12px; color: var(--ink-soft); margin-bottom: 12px; }
+  .revenue-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+  }
+  .metric-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 4px;
+  }
+  .metric-value { font-size: 22px; font-weight: 700; }
+  .metric-change { font-size: 12px; font-weight: 600; margin-top: 4px; }
+  .metric-change.positive { color: var(--status-sent); }
+  .metric-change.negative { color: var(--status-error); }
+  .metric-change.neutral { color: var(--ink-soft); }
+  .metric-daily-rate { font-size: 11px; color: var(--ink-soft); margin-top: 4px; }
   .data-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -280,6 +300,7 @@
   }
   .toast.success { background: var(--status-sent); }
   .toast.error { background: var(--status-error); }
+  .toast[hidden] { display: none !important; }
   .toast-dismiss {
     background: none;
     border: none;
@@ -422,6 +443,7 @@
   function showView(view) {
     dashboardView.hidden = view !== 'dashboard';
     reviewView.hidden = view !== 'review';
+    hideToast();
   }
 
   // ---- Dashboard view -------------------------------------------------
@@ -609,15 +631,30 @@
     }
     applyRatingState(rating);
 
-    upBtn.addEventListener('click', () => {
-      const newRating = (fieldKey === 'opening' ? openingRating : closingRating) === 1 ? null : 1;
+    function commitRating(newRating) {
+      const prevRating = fieldKey === 'opening' ? openingRating : closingRating;
       if (fieldKey === 'opening') openingRating = newRating; else closingRating = newRating;
       applyRatingState(newRating);
+      upBtn.disabled = true;
+      downBtn.disabled = true;
+      saveDraft().then(success => {
+        if (!success) {
+          if (fieldKey === 'opening') openingRating = prevRating; else closingRating = prevRating;
+          applyRatingState(prevRating);
+        }
+      }).finally(() => {
+        upBtn.disabled = false;
+        downBtn.disabled = false;
+      });
+    }
+
+    upBtn.addEventListener('click', () => {
+      const current = fieldKey === 'opening' ? openingRating : closingRating;
+      commitRating(current === 1 ? null : 1);
     });
     downBtn.addEventListener('click', () => {
-      const newRating = (fieldKey === 'opening' ? openingRating : closingRating) === -1 ? null : -1;
-      if (fieldKey === 'opening') openingRating = newRating; else closingRating = newRating;
-      applyRatingState(newRating);
+      const current = fieldKey === 'opening' ? openingRating : closingRating;
+      commitRating(current === -1 ? null : -1);
     });
 
     thumbs.appendChild(upBtn);
@@ -638,6 +675,10 @@
 
     const data = section.data || {};
 
+    if (section.section_key === 'revenue') {
+      return renderRevenueSection(data);
+    }
+
     if (Array.isArray(data.items)) {
       const list = document.createElement('ul');
       list.className = 'item-list';
@@ -656,34 +697,91 @@
       return list;
     }
 
-    const FRIENDLY_LABELS = {
-      current_revenue: 'Revenue this month',
-      current_daily_rate: 'Daily rate',
-      prior_daily_rate: `Daily rate (${data.comparison_period_label || 'prior period'})`,
-      pct_change: 'Change vs. prior period',
-      days_current: 'Days in period'
-    };
-    const SKIP_KEYS = new Set(['comparison_period_label', 'prior_revenue', 'days_prior']);
-
+    // Generic fallback for any future atomic section with a flat shape.
+    // Explicitly skips nested objects rather than stringifying them —
+    // the root cause of the "[object Object]" bug was rendering a value
+    // without checking its type first.
     const grid = document.createElement('div');
     grid.className = 'data-grid';
     Object.entries(data).forEach(([key, val]) => {
-      if (SKIP_KEYS.has(key) || val === null || val === undefined) return;
+      if (val === null || val === undefined || typeof val === 'object') return;
       const item = document.createElement('div');
       item.className = 'data-item';
       const label = document.createElement('div');
       label.className = 'data-label';
-      label.textContent = FRIENDLY_LABELS[key] || key;
+      label.textContent = key;
       const value = document.createElement('div');
       value.className = 'data-value';
-      value.textContent = (key === 'pct_change')
-        ? (val === null ? '\u2014' : `${val > 0 ? '+' : ''}${val}%`)
-        : (key.includes('revenue') || key.includes('rate')) ? `$${val}` : val;
+      value.textContent = val;
       item.appendChild(label);
       item.appendChild(value);
       grid.appendChild(item);
     });
     return grid;
+  }
+
+  const METRIC_LABELS = { revenue: 'Revenue', items_sold: 'Items Sold', transactions: 'Transactions' };
+  const METRIC_ORDER = ['revenue', 'items_sold', 'transactions'];
+
+  function formatMetricValue(key, value) {
+    if (value === null || value === undefined) return '\u2014';
+    return key === 'revenue' ? `$${value.toFixed(2)}` : Math.round(value).toLocaleString();
+  }
+
+  function formatPctChange(pct) {
+    if (pct === null || pct === undefined) return { text: '\u2014', cls: 'neutral' };
+    const sign = pct > 0 ? '+' : '';
+    const cls = pct > 0 ? 'positive' : (pct < 0 ? 'negative' : 'neutral');
+    const arrow = pct > 0 ? '\u25B2 ' : (pct < 0 ? '\u25BC ' : '');
+    return { text: `${arrow}${sign}${pct}%`, cls };
+  }
+
+  function renderRevenueSection(data) {
+    const wrap = document.createElement('div');
+
+    if (data.comparison_period_label) {
+      const label = document.createElement('div');
+      label.className = 'comparison-label';
+      label.textContent = `Compared to ${data.comparison_period_label}`;
+      wrap.appendChild(label);
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'revenue-metrics';
+
+    METRIC_ORDER.forEach(key => {
+      const metric = data[key];
+      if (!metric) return;
+
+      const block = document.createElement('div');
+      block.className = 'metric-block';
+
+      const label = document.createElement('div');
+      label.className = 'metric-label';
+      label.textContent = METRIC_LABELS[key] || key;
+
+      const value = document.createElement('div');
+      value.className = 'metric-value';
+      value.textContent = formatMetricValue(key, metric.current);
+
+      const change = formatPctChange(metric.pct_change);
+      const changeEl = document.createElement('div');
+      changeEl.className = `metric-change ${change.cls}`;
+      changeEl.textContent = change.text;
+
+      const rate = document.createElement('div');
+      rate.className = 'metric-daily-rate';
+      rate.textContent = `Daily rate: ${formatMetricValue(key, metric.current_daily_rate)} (vs ${formatMetricValue(key, metric.prior_daily_rate)})`;
+
+      block.appendChild(label);
+      block.appendChild(value);
+      block.appendChild(changeEl);
+      block.appendChild(rate);
+      grid.appendChild(block);
+    });
+
+    wrap.appendChild(grid);
+    return wrap;
   }
 
   function renderSectionCard(section) {
