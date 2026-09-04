@@ -265,19 +265,24 @@
   .bestseller-category-label { font-weight: 600; font-size: 14px; color: var(--ink); margin: 10px 0 4px; }
   .bestseller-category-label:first-child { margin-top: 0; }
 
-  .tod-summary {
+  .bt-summary {
     font-size: 13px;
     color: var(--ink-soft);
     margin-bottom: 12px;
   }
-  .tod-summary strong { color: var(--ink); font-weight: 700; }
-  .tod-heatmap-wrap { overflow-x: auto; }
-  .tod-heatmap-table {
+  .bt-summary strong { color: var(--ink); font-weight: 700; }
+  .bt-caption {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .bt-heatmap-wrap { overflow-x: auto; }
+  .bt-heatmap-table {
     border-collapse: collapse;
     width: 100%;
     font-size: 13px;
   }
-  .tod-heatmap-table th {
+  .bt-heatmap-table th {
     padding: 6px 8px;
     font-size: 11px;
     font-weight: 600;
@@ -286,17 +291,34 @@
     border-bottom: 1px solid var(--rule);
     white-space: nowrap;
   }
-  .tod-heatmap-table td {
+  .bt-heatmap-table td {
     padding: 8px;
     text-align: center;
     font-weight: 600;
     white-space: nowrap;
   }
-  .tod-day-label {
+  .bt-day-label {
     text-align: left;
     font-size: 12px;
     font-weight: 600;
     color: var(--ink);
+  }
+  .bt-legend {
+    margin-top: 10px;
+    width: 140px;
+  }
+  .bt-legend-swatch {
+    width: 100%;
+    height: 10px;
+    border-radius: 3px;
+    background: linear-gradient(to right, #FAEEDA 0%, #EF9F27 50%, #D85A30 100%);
+  }
+  .bt-legend-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--ink-soft);
   }
   .action-row { display: flex; gap: 12px; margin-top: 24px; }
   button.primary, button.secondary {
@@ -730,8 +752,8 @@
       return renderBestSellersSection(data);
     }
 
-    if (section.section_key === 'time_of_day') {
-      return renderTimeOfDaySection(data);
+    if (section.section_key === 'busiest_times') {
+      return renderBusiestTimesSection(data);
     }
     
     if (Array.isArray(data.items)) {
@@ -900,86 +922,110 @@
   }
 
   function getHeatmapColor(intensity) {
-  const cream = [250, 238, 218];  // #FAEEDA
-  const amber = [239, 159, 39];   // #EF9F27
-  const coral = [216, 90, 48];    // #D85A30
-  const lerp = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
-  const rgb = intensity <= 0.5
-    ? lerp(cream, amber, intensity / 0.5)
-    : lerp(amber, coral, (intensity - 0.5) / 0.5);
-  return '#' + rgb.map(x => x.toString(16).padStart(2, '0')).join('');
-}
-
-function getHeatmapTextColor(intensity) {
-  return intensity < 0.55 ? '#633806' : '#FAE5C8';
-}
-
-function renderTimeOfDaySection(data) {
-  const wrap = document.createElement('div');
-
-  const summary = document.createElement('div');
-  summary.className = 'tod-summary';
-  const total = data.total_transactions ?? 0;
-  summary.innerHTML = `Total monthly transactions: <strong>${total.toLocaleString()}</strong>`;
-  wrap.appendChild(summary);
-
-  const bins = data.bins || [];
-  const heatmap = data.heatmap || [];
-  if (bins.length === 0 || heatmap.length === 0) {
-    const empty = document.createElement('p');
-    empty.className = 'section-empty';
-    empty.textContent = 'No time-of-day data available for this period.';
-    wrap.appendChild(empty);
-    return wrap;
+    const cream = [250, 238, 218];  // #FAEEDA
+    const amber = [239, 159, 39];   // #EF9F27
+    const coral = [216, 90, 48];    // #D85A30
+    const lerp = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+    const rgb = intensity <= 0.5
+      ? lerp(cream, amber, intensity / 0.5)
+      : lerp(amber, coral, (intensity - 0.5) / 0.5);
+    return '#' + rgb.map(x => x.toString(16).padStart(2, '0')).join('');
   }
 
-  const allValues = heatmap.flatMap(row => row.cells.map(c => c.avg_transactions));
-  const maxValue = Math.max(...allValues, 0);
+  function getHeatmapTextColor(intensity) {
+    return intensity < 0.55 ? '#633806' : '#FAE5C8';
+  }
 
-  const tableWrap = document.createElement('div');
-  tableWrap.className = 'tod-heatmap-wrap';
-
-  const table = document.createElement('table');
-  table.className = 'tod-heatmap-table';
-
-  const thead = document.createElement('thead');
-  const headerRow = document.createElement('tr');
-  headerRow.appendChild(document.createElement('th')); // blank corner cell, above day labels
-  bins.forEach(bin => {
-    const th = document.createElement('th');
-    th.textContent = bin.label;
-    headerRow.appendChild(th);
-  });
-  thead.appendChild(headerRow);
-  table.appendChild(thead);
-
-  const tbody = document.createElement('tbody');
-  heatmap.forEach(row => {
-    const tr = document.createElement('tr');
-
-    const dayCell = document.createElement('td');
-    dayCell.className = 'tod-day-label';
-    dayCell.textContent = row.day_short;
-    tr.appendChild(dayCell);
-
-    row.cells.forEach(cell => {
-      const td = document.createElement('td');
-      const intensity = maxValue > 0 ? cell.avg_transactions / maxValue : 0;
-      td.style.backgroundColor = getHeatmapColor(intensity);
-      td.style.color = getHeatmapTextColor(intensity);
-      td.textContent = cell.avg_transactions;
-      td.title = `${row.day} — ${bins[cell.bin_index].label}: ${cell.avg_transactions} avg transactions`;
-      tr.appendChild(td);
+  function renderBusiestTimesSection(data) {
+    const wrap = document.createElement('div');
+  
+    const summary = document.createElement('div');
+    summary.className = 'bt-summary';
+    const total = data.total_transactions ?? 0;
+    summary.innerHTML = `Total monthly transactions: <strong>${total.toLocaleString()}</strong>`;
+    wrap.appendChild(summary);
+  
+    const caption = document.createElement('div');
+    caption.className = 'bt-caption';
+    caption.textContent = 'Average transactions per time block';
+    wrap.appendChild(caption);
+  
+    const bins = data.bins || [];
+    const heatmap = data.heatmap || [];
+    if (bins.length === 0 || heatmap.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'section-empty';
+      empty.textContent = 'No busiest-times data available for this period.';
+      wrap.appendChild(empty);
+      return wrap;
+    }
+  
+    const allValues = heatmap.flatMap(row => row.cells.map(c => c.avg_transactions));
+    const maxValue = Math.max(...allValues, 0);
+  
+    const tableWrap = document.createElement('div');
+    tableWrap.className = 'bt-heatmap-wrap';
+  
+    const table = document.createElement('table');
+    table.className = 'bt-heatmap-table';
+  
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    headerRow.appendChild(document.createElement('th')); // blank corner cell, above day labels
+    bins.forEach(bin => {
+      const th = document.createElement('th');
+      th.textContent = bin.label;
+      headerRow.appendChild(th);
     });
-
-    tbody.appendChild(tr);
-  });
-  table.appendChild(tbody);
-  tableWrap.appendChild(table);
-  wrap.appendChild(tableWrap);
-
-  return wrap;
-}
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+  
+    const tbody = document.createElement('tbody');
+    heatmap.forEach(row => {
+      const tr = document.createElement('tr');
+  
+      const dayCell = document.createElement('td');
+      dayCell.className = 'bt-day-label';
+      dayCell.textContent = row.day_short;
+      tr.appendChild(dayCell);
+  
+      row.cells.forEach(cell => {
+        const td = document.createElement('td');
+        const intensity = maxValue > 0 ? cell.avg_transactions / maxValue : 0;
+        td.style.backgroundColor = getHeatmapColor(intensity);
+        td.style.color = getHeatmapTextColor(intensity);
+        td.textContent = cell.avg_transactions;
+        td.title = `${row.day} — ${bins[cell.bin_index].label}: ${cell.avg_transactions} avg transactions`;
+        tr.appendChild(td);
+      });
+  
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+    wrap.appendChild(tableWrap);
+  
+    const legend = document.createElement('div');
+    legend.className = 'bt-legend';
+  
+    const swatch = document.createElement('div');
+    swatch.className = 'bt-legend-swatch';
+    legend.appendChild(swatch);
+  
+    const labels = document.createElement('div');
+    labels.className = 'bt-legend-labels';
+    const lowLabel = document.createElement('span');
+    lowLabel.textContent = 'Slower';
+    const highLabel = document.createElement('span');
+    highLabel.textContent = 'Busier';
+    labels.appendChild(lowLabel);
+    labels.appendChild(highLabel);
+    legend.appendChild(labels);
+  
+    wrap.appendChild(legend);
+  
+    return wrap;
+  }
   
   function renderSectionCard(section) {
     const card = document.createElement('div');
