@@ -265,17 +265,6 @@
   .bestseller-category-label { font-weight: 600; font-size: 14px; color: var(--ink); margin: 10px 0 4px; }
   .bestseller-category-label:first-child { margin-top: 0; }
 
-  .bt-summary {
-    font-size: 13px;
-    color: var(--ink-soft);
-    margin-bottom: 12px;
-  }
-  .bt-summary strong { color: var(--ink); font-weight: 700; }
-  .bt-caption {
-    font-size: 12px;
-    color: var(--ink-soft);
-    margin-bottom: 12px;
-  }
   .bt-heatmap-wrap { overflow-x: auto; }
   .bt-heatmap-table {
     border-collapse: collapse;
@@ -938,12 +927,6 @@
 
   function renderBusiestTimesSection(data) {
     const wrap = document.createElement('div');
-  
-    const summary = document.createElement('div');
-    summary.className = 'bt-summary';
-    const total = data.total_transactions ?? 0;
-    summary.innerHTML = `Total monthly transactions: <strong>${total.toLocaleString()}</strong>`;
-    wrap.appendChild(summary);
   
     const caption = document.createElement('div');
     caption.className = 'bt-caption';
