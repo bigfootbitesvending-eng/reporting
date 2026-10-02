@@ -859,7 +859,7 @@
   // object captured at render time goes stale after the first save.
 
   const NEW_ITEMS_GROUPS = [
-    { type: 'introduced', label: 'Introduced' },
+    { type: 'introduced', label: 'New' },
     { type: 'reintroduced', label: 'Reintroduced' },
     { type: 'retired', label: 'Retired' }
   ];
@@ -1483,7 +1483,12 @@
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || `${res.status} ${res.statusText}`);
 
+      // Keep the section objects the page is already showing. Their checkboxes
+      // write straight to them, so swapping in the server's copy would orphan
+      // every toggle made after this save.
+      const liveSections = currentReport.sections;
       currentReport = body;
+      if (liveSections) currentReport.sections = liveSections;
       skippedSections = new Set(body.sections_skipped || []);
       openingRating = body.opening_rating;
       closingRating = body.closing_rating;
