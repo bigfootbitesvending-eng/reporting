@@ -373,6 +373,8 @@
     color: var(--ink-soft);
   }
   .action-row { display: flex; gap: 12px; margin-top: 24px; }
+  .regen-btn { margin-left: auto; }
+  .action-row.regen-only .regen-btn { margin-left: 0; }
   button.primary, button.secondary {
     font-family: var(--font-body);
     font-size: 14px;
@@ -1504,6 +1506,77 @@
     }
   }
 
+  // ---- Regenerate ----------------------------------------------------
+  // Rebuilds the report from the latest data by calling the same endpoint the
+  // dashboard uses when no report exists yet. It overwrites the saved sections,
+  // text, and ratings. It never clears skipped sections. Sent reports don't get
+  // this button: the send stamps would survive and Approve would email a
+  // second copy.
+
+  let regenerating = false;
+
+  function createRegenerateButton() {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'regenerate-btn';
+    btn.className = 'secondary regen-btn';
+    btn.textContent = 'Regenerate';
+    btn.title = 'Rebuild this report from the latest data. Replaces text and section edits.';
+    btn.addEventListener('click', regenerateReport);
+    return btn;
+  }
+
+  async function regenerateReport() {
+    if (!currentReport || regenerating) return;
+    const location = currentReport.location;
+    const apiMonth = lastLoadedApiMonth;
+
+    // Never regenerate on a guess. The month must match the report on screen.
+    if (!apiMonth || String(currentReport.month).slice(0, 7) !== apiMonth.slice(0, 7)) {
+      showToast('Could not confirm which month this report is for. Go back, reopen it, and try again.', 'error', null);
+      return;
+    }
+
+    const [y, m] = apiMonth.split('-');
+    const label = `${location} ${MONTH_NAMES[parseInt(m, 10) - 1]} ${y}`;
+    if (!window.confirm(`Regenerate ${label}?\n\nThis replaces the opening and closing text, the ratings, and every section, including items you moved, added, or unchecked. Skipped sections stay skipped. This cannot be undone.`)) return;
+
+    regenerating = true;
+    ['save-draft-btn', 'approve-btn', 'regenerate-btn'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = true;
+    });
+    showToast('Regenerating. This can take about a minute.', 'success', null);
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 120000);
+    let failure = null;
+    try {
+      const res = await fetch(`${API_BASE}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+        body: JSON.stringify({ location, month: apiMonth }),
+        signal: controller.signal
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || body.message || `${res.status} ${res.statusText}`);
+    } catch (err) {
+      failure = err.name === 'AbortError'
+        ? 'it took too long to answer. Reopen the report in a minute to see where it landed.'
+        : err.message;
+      console.error(err);
+    } finally {
+      clearTimeout(timer);
+    }
+
+    // Reload either way so the screen shows the report as it really is now,
+    // including the error banner if generation failed part way.
+    await openReview(location);
+    regenerating = false;
+    if (failure) showToast(`Couldn't regenerate: ${failure}`, 'error', null);
+    else showToast('Report regenerated.', 'success', 3000);
+  }
+
   async function approveReport() {
     if (!currentReport) return;
     if (!window.confirm('Approve and send this report? This cannot be undone.')) return;
@@ -1566,6 +1639,10 @@
       banner.className = 'error-banner';
       banner.textContent = report.error_message || 'Report generation failed for an unspecified reason.';
       reviewContent.appendChild(banner);
+      const errorRow = document.createElement('div');
+      errorRow.className = 'action-row regen-only';
+      errorRow.appendChild(createRegenerateButton());
+      reviewContent.appendChild(errorRow);
       return;
     }
 
@@ -1607,6 +1684,7 @@
 
     actionRow.appendChild(saveBtn);
     actionRow.appendChild(approveBtn);
+    actionRow.appendChild(createRegenerateButton());
     reviewContent.appendChild(actionRow);
   }
 
