@@ -265,6 +265,69 @@
   .bestseller-category-label { font-weight: 600; font-size: 14px; color: var(--ink); margin: 10px 0 4px; }
   .bestseller-category-label:first-child { margin-top: 0; }
 
+  .newitems-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .newitems-group-label { font-weight: 600; font-size: 14px; color: var(--ink); margin: 10px 0 4px; }
+  .newitems-group-label:first-child { margin-top: 0; }
+  .newitems-count { font-weight: 400; color: var(--ink-soft); margin-left: 6px; }
+  .newitem-row { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; font-size: 13px; }
+  .newitem-row input[type="checkbox"] { margin-top: 2px; }
+  .newitem-text { flex: 1; min-width: 0; }
+  .newitem-note { font-size: 12px; color: var(--ink-soft); margin-top: 1px; }
+  .newitem-type {
+    font-family: var(--font-body);
+    font-size: 12px;
+    padding: 3px 6px;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .newitem-add { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule); }
+  .newitem-add-label { font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
+  .newitem-add-row { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+  .newitem-search-wrap { position: relative; flex: 1; min-width: 200px; }
+  .newitem-search {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 6px 8px;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+  }
+  .newitem-suggest {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    z-index: 20;
+    margin: 2px 0 0;
+    padding: 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  }
+  .newitem-suggest[hidden] { display: none; }
+  .newitem-suggest li { padding: 6px 8px; font-size: 13px; cursor: pointer; }
+  .newitem-suggest li:hover, .newitem-suggest li.active { background: #f0f2ee; }
+  .newitem-suggest .sub { font-size: 11px; color: var(--ink-soft); }
+  .newitem-add-btn {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--rule);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .newitem-add-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
   .bt-heatmap-wrap { overflow-x: auto; }
   .bt-heatmap-table {
     border-collapse: collapse;
@@ -724,6 +787,10 @@
   }
 
   function renderSectionBody(section) {
+    if (section.section_key === 'new_items') {
+      return renderNewItemsSection();
+    }
+
     if (!section.has_data) {
       const p = document.createElement('p');
       p.className = 'section-empty';
@@ -784,6 +851,330 @@
       grid.appendChild(item);
     });
     return grid;
+  }
+
+  // ---- New, Retired & Reintroduced section ----------------------------
+  // Every handler here looks the section up in currentReport at event time.
+  // saveDraft() replaces currentReport with the server's copy, so any item
+  // object captured at render time goes stale after the first save.
+
+  const NEW_ITEMS_GROUPS = [
+    { type: 'introduced', label: 'Introduced' },
+    { type: 'reintroduced', label: 'Reintroduced' },
+    { type: 'retired', label: 'Retired' }
+  ];
+  const INVENTORY_BASE = API_BASE.replace(/\/reports$/, '/inventory');
+  let catalogPromise = null;
+  let newItemsBusy = false;
+
+  function newItemsGroupLabel(type) {
+    const group = NEW_ITEMS_GROUPS.find(g => g.type === type);
+    return group ? group.label : type;
+  }
+
+  function getNewItemsSection() {
+    return ((currentReport && currentReport.sections) || []).find(s => s.section_key === 'new_items') || null;
+  }
+
+  function newItemsList() {
+    const section = getNewItemsSection();
+    if (!section) return [];
+    if (!section.data || typeof section.data !== 'object') section.data = {};
+    if (!Array.isArray(section.data.items)) section.data.items = [];
+    return section.data.items;
+  }
+
+  function findNewItem(upc, type) {
+    return newItemsList().find(i => i.upc === upc && i.detection_type === type) || null;
+  }
+
+  function loadCatalog() {
+    if (!catalogPromise) {
+      catalogPromise = fetch(`${INVENTORY_BASE}/products`, { headers: { 'X-API-Key': API_KEY } })
+        .then(res => {
+          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          return res.json();
+        })
+        .then(body => (body.products || []).map(p => ({ upc: String(p.upc), name: p.product_name || '' })))
+        .catch(err => { catalogPromise = null; throw err; });
+    }
+    return catalogPromise;
+  }
+
+  function searchCatalog(products, term) {
+    const t = term.trim().toLowerCase();
+    if (t.length < 2) return [];
+    return products
+      .filter(p => p.name.toLowerCase().includes(t) || p.upc.startsWith(t))
+      .slice(0, 8);
+  }
+
+  // Redraws the section in place. There is only ever one of these on the page.
+  function redrawNewItems() {
+    const el = document.querySelector('.newitems-wrap');
+    if (el) el.replaceWith(renderNewItemsSection());
+  }
+
+  // Shows the change, saves it, and puts it back if the save fails.
+  async function commitNewItemsChange(undo) {
+    newItemsBusy = true;
+    redrawNewItems();
+    const saved = await saveDraft();
+    if (!saved) undo();
+    newItemsBusy = false;
+    redrawNewItems();
+  }
+
+  function renderNewItemsSection() {
+    const wrap = document.createElement('div');
+    wrap.className = 'newitems-wrap';
+    const readOnly = !!currentReport && currentReport.status === 'sent';
+    const items = newItemsList();
+
+    if (items.length === 0) {
+      const p = document.createElement('p');
+      p.className = 'section-empty';
+      p.textContent = 'No new, retired, or reintroduced items found for this period.';
+      wrap.appendChild(p);
+    }
+
+    let shown = 0;
+    NEW_ITEMS_GROUPS.forEach(group => {
+      const groupItems = items.filter(i => i.detection_type === group.type);
+      if (groupItems.length === 0) return;
+      shown += groupItems.length;
+      const label = document.createElement('div');
+      label.className = 'newitems-group-label';
+      label.textContent = group.label;
+      const count = document.createElement('span');
+      count.className = 'newitems-count';
+      count.textContent = `(${groupItems.length})`;
+      label.appendChild(count);
+      wrap.appendChild(label);
+      groupItems.forEach(item => wrap.appendChild(renderNewItemRow(item, readOnly)));
+    });
+
+    if (shown !== items.length) {
+      const warn = document.createElement('div');
+      warn.className = 'action-note error';
+      warn.textContent = `${items.length - shown} item(s) have an unrecognized type and are not shown. Check the report data.`;
+      wrap.appendChild(warn);
+    }
+
+    if (!readOnly) wrap.appendChild(renderNewItemAddForm());
+    return wrap;
+  }
+
+  function renderNewItemRow(item, readOnly) {
+    const upc = item.upc;
+    const type = item.detection_type;
+
+    const row = document.createElement('div');
+    row.className = 'newitem-row';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = item.included !== false;
+    checkbox.disabled = readOnly;
+    checkbox.addEventListener('change', () => {
+      const live = findNewItem(upc, type);
+      if (live) live.included = checkbox.checked;
+    });
+
+    const text = document.createElement('div');
+    text.className = 'newitem-text';
+    const name = document.createElement('div');
+    name.textContent = item.product_name || upc;
+    text.appendChild(name);
+
+    const noteParts = [];
+    if (item.description) noteParts.push(item.description);
+    if (type !== 'retired' && !item.manual && !item.moved && Number.isFinite(item.units_sold)) {
+      noteParts.push(item.units_sold === 1 ? '1 unit sold' : `${item.units_sold} units sold`);
+    }
+    if (noteParts.length > 0) {
+      const note = document.createElement('div');
+      note.className = 'newitem-note';
+      note.textContent = noteParts.join(' \u00B7 ');
+      text.appendChild(note);
+    }
+
+    const select = document.createElement('select');
+    select.className = 'newitem-type';
+    select.disabled = readOnly;
+    select.setAttribute('aria-label', 'Group for ' + (item.product_name || upc));
+    NEW_ITEMS_GROUPS.forEach(g => {
+      const option = document.createElement('option');
+      option.value = g.type;
+      option.textContent = g.label;
+      if (g.type === type) option.selected = true;
+      select.appendChild(option);
+    });
+    select.addEventListener('change', () => {
+      const target = select.value;
+      const live = findNewItem(upc, type);
+      if (!live || target === type) return;
+      if (newItemsBusy) { select.value = type; return; }
+      if (findNewItem(upc, target)) {
+        select.value = type;
+        showToast(`${live.product_name} is already listed under ${newItemsGroupLabel(target)}.`, 'error', 3500);
+        return;
+      }
+      const before = { description: live.description, moved: live.moved };
+      live.description = `Moved from ${newItemsGroupLabel(type)}`;
+      live.moved = true;
+      live.detection_type = target;
+      commitNewItemsChange(() => {
+        live.detection_type = type;
+        live.description = before.description;
+        if (before.moved === undefined) delete live.moved; else live.moved = before.moved;
+      });
+    });
+
+    row.appendChild(checkbox);
+    row.appendChild(text);
+    row.appendChild(select);
+    return row;
+  }
+
+  function renderNewItemAddForm() {
+    const form = document.createElement('div');
+    form.className = 'newitem-add';
+
+    const label = document.createElement('div');
+    label.className = 'newitem-add-label';
+    label.textContent = 'Add an item';
+    form.appendChild(label);
+
+    const row = document.createElement('div');
+    row.className = 'newitem-add-row';
+
+    const searchWrap = document.createElement('div');
+    searchWrap.className = 'newitem-search-wrap';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'newitem-search';
+    input.placeholder = 'Search products by name or UPC';
+    input.autocomplete = 'off';
+    const suggest = document.createElement('ul');
+    suggest.className = 'newitem-suggest';
+    suggest.hidden = true;
+    searchWrap.appendChild(input);
+    searchWrap.appendChild(suggest);
+
+    const typeSelect = document.createElement('select');
+    typeSelect.className = 'newitem-type';
+    typeSelect.setAttribute('aria-label', 'Group for the new item');
+    NEW_ITEMS_GROUPS.forEach(g => {
+      const option = document.createElement('option');
+      option.value = g.type;
+      option.textContent = g.label;
+      typeSelect.appendChild(option);
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'newitem-add-btn';
+    addBtn.textContent = 'Add';
+    addBtn.disabled = true;
+
+    let selected = null;
+    let matches = [];
+    let activeIndex = -1;
+
+    function showSuggestions() {
+      suggest.innerHTML = '';
+      if (matches.length === 0) { suggest.hidden = true; return; }
+      matches.forEach((p, idx) => {
+        const li = document.createElement('li');
+        if (idx === activeIndex) li.classList.add('active');
+        const n = document.createElement('div');
+        n.textContent = p.name;
+        const sub = document.createElement('div');
+        sub.className = 'sub';
+        sub.textContent = p.upc;
+        li.appendChild(n);
+        li.appendChild(sub);
+        li.addEventListener('mousedown', e => { e.preventDefault(); choose(p); });
+        suggest.appendChild(li);
+      });
+      suggest.hidden = false;
+    }
+
+    function choose(p) {
+      selected = p;
+      input.value = p.name;
+      matches = [];
+      activeIndex = -1;
+      suggest.hidden = true;
+      addBtn.disabled = false;
+    }
+
+    input.addEventListener('focus', () => {
+      loadCatalog().catch(err => showToast(`Couldn't load products: ${err.message}`, 'error', null));
+    });
+    input.addEventListener('input', async () => {
+      selected = null;
+      addBtn.disabled = true;
+      let products;
+      try { products = await loadCatalog(); } catch (err) { return; }
+      matches = searchCatalog(products, input.value);
+      activeIndex = -1;
+      showSuggestions();
+    });
+    input.addEventListener('keydown', e => {
+      if (suggest.hidden || matches.length === 0) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeIndex = (activeIndex + 1) % matches.length;
+        showSuggestions();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIndex = (activeIndex - 1 + matches.length) % matches.length;
+        showSuggestions();
+      } else if (e.key === 'Enter' && activeIndex >= 0) {
+        e.preventDefault();
+        choose(matches[activeIndex]);
+      } else if (e.key === 'Escape') {
+        suggest.hidden = true;
+      }
+    });
+    input.addEventListener('blur', () => { suggest.hidden = true; });
+
+    addBtn.addEventListener('click', () => {
+      if (!selected || newItemsBusy) return;
+      const type = typeSelect.value;
+      if (findNewItem(selected.upc, type)) {
+        showToast(`${selected.name} is already listed under ${newItemsGroupLabel(type)}.`, 'error', 3500);
+        return;
+      }
+      const section = getNewItemsSection();
+      if (!section) return;
+      const hadData = section.has_data;
+      const added = {
+        upc: selected.upc,
+        product_name: selected.name,
+        detection_type: type,
+        description: 'Added manually',
+        units_sold: 0,
+        included: true,
+        manual: true
+      };
+      newItemsList().push(added);
+      section.has_data = true;
+      commitNewItemsChange(() => {
+        const list = newItemsList();
+        const idx = list.indexOf(added);
+        if (idx >= 0) list.splice(idx, 1);
+        section.has_data = hadData;
+      });
+    });
+
+    row.appendChild(searchWrap);
+    row.appendChild(typeSelect);
+    row.appendChild(addBtn);
+    form.appendChild(row);
+    return form;
   }
 
   const METRIC_LABELS = { revenue: 'Revenue', items_sold: 'Items Sold', transactions: 'Transactions' };
