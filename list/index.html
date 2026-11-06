@@ -427,11 +427,15 @@
     from { opacity: 0; transform: translate(-50%, -10px); }
     to { opacity: 1; transform: translate(-50%, 0); }
   }
+  .back-link { display: inline-block; margin-bottom: 1rem; font-size: 0.85rem; color: var(--ink-soft); text-decoration: none; }
+  .back-link:focus-visible { outline: 2px solid var(--ledger-green); outline-offset: 2px; }
+  .badge.not_started, .badge.draft { color: var(--ink); }
 </style>
 </head>
 <body>
 
 <header>
+  <a class="back-link" href="/">&larr; Operator Tools</a>
   <h1>Monthly Reports</h1>
   <div class="month-control">
     <button type="button" class="month-nav-btn" id="prev-month" aria-label="Previous month">‹</button>
@@ -1019,7 +1023,7 @@
       if (newItemsBusy) { select.value = type; return; }
       if (findNewItem(upc, target)) {
         select.value = type;
-        showToast(`${live.product_name} is already listed under ${newItemsGroupLabel(target)}.`, 'error', 3500);
+        showToast(`${live.product_name} is already listed under ${newItemsGroupLabel(target)}.`, 'error', null);
         return;
       }
       const before = { description: live.description, moved: live.moved };
@@ -1147,7 +1151,7 @@
       if (!selected || newItemsBusy) return;
       const type = typeSelect.value;
       if (findNewItem(selected.upc, type)) {
-        showToast(`${selected.name} is already listed under ${newItemsGroupLabel(type)}.`, 'error', 3500);
+        showToast(`${selected.name} is already listed under ${newItemsGroupLabel(type)}.`, 'error', null);
         return;
       }
       const section = getNewItemsSection();
@@ -1495,7 +1499,7 @@
       openingRating = body.opening_rating;
       closingRating = body.closing_rating;
 
-      showToast('Draft saved.', 'success', 2500);
+      showToast('Draft saved.', 'success', 5000);
       return true;
     } catch (err) {
       showToast(`Couldn't save: ${err.message}`, 'error', null);
@@ -1574,7 +1578,7 @@
     await openReview(location);
     regenerating = false;
     if (failure) showToast(`Couldn't regenerate: ${failure}`, 'error', null);
-    else showToast('Report regenerated.', 'success', 3000);
+    else showToast('Report regenerated.', 'success', 5000);
   }
 
   async function approveReport() {
@@ -1607,7 +1611,7 @@
       if (!res.ok) throw new Error(body.error || `${res.status} ${res.statusText}`);
 
       currentReport = body;
-      showToast('Report sent.', 'success', 3000);
+      showToast('Report sent.', 'success', 5000);
       renderReview(currentReport);
     } catch (err) {
       showToast(`Couldn't send: ${err.message}`, 'error', null);
