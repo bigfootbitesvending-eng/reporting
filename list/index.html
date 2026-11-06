@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/shared/styles.css">
+<link rel="stylesheet" href="/shared/components.css">
 <style>
   /* Page-specific component styles. Colors/fonts reference the shared
      tokens from /shared/styles.css rather than redefining a palette. */
@@ -389,44 +390,6 @@
   .action-note { font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
   .action-note.error { color: var(--status-error); }
 
-  .toast {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    min-width: 280px;
-    max-width: 90vw;
-    padding: 14px 18px;
-    border-radius: 8px;
-    font-family: var(--font-body);
-    font-size: 14px;
-    font-weight: 600;
-    color: #fff;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    z-index: 1000;
-    animation: toast-in 0.15s ease-out;
-  }
-  .toast.success { background: var(--status-sent); }
-  .toast.error { background: var(--status-error); }
-  .toast[hidden] { display: none !important; }
-  .toast-dismiss {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 18px;
-    line-height: 1;
-    cursor: pointer;
-    padding: 0;
-    flex-shrink: 0;
-  }
-  @keyframes toast-in {
-    from { opacity: 0; transform: translate(-50%, -10px); }
-    to { opacity: 1; transform: translate(-50%, 0); }
-  }
   .back-link { display: inline-block; margin-bottom: 1rem; font-size: 0.85rem; color: var(--ink-soft); text-decoration: none; }
   .back-link:focus-visible { outline: 2px solid var(--ledger-green); outline-offset: 2px; }
   .badge.not_started, .badge.draft { color: var(--ink); }
@@ -458,9 +421,9 @@
   </section>
 </main>
 
-<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="/shared/config.js"></script>
+<script src="/shared/messages.js"></script>
 <script>
   // API_KEY comes from /shared/config.js (const API_KEY = '...').
   const API_BASE = 'https://randysmith42.app.n8n.cloud/webhook/reports';
@@ -536,35 +499,10 @@
   // something that should be allowed to quietly scroll out of view.
   // Success auto-dismisses since it needs acknowledgment, not action.
 
-  let toastTimeout = null;
 
-  function showToast(message, type, autoDismissMs) {
-    const toast = document.getElementById('toast');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = '';
-
-    const msg = document.createElement('span');
-    msg.textContent = message;
-    toast.appendChild(msg);
-
-    const dismiss = document.createElement('button');
-    dismiss.type = 'button';
-    dismiss.className = 'toast-dismiss';
-    dismiss.setAttribute('aria-label', 'Dismiss');
-    dismiss.textContent = '\u00D7';
-    dismiss.addEventListener('click', hideToast);
-    toast.appendChild(dismiss);
-
-    toast.hidden = false;
-
-    if (toastTimeout) clearTimeout(toastTimeout);
-    toastTimeout = autoDismissMs ? setTimeout(hideToast, autoDismissMs) : null;
-  }
-
-  function hideToast() {
-    document.getElementById('toast').hidden = true;
-    if (toastTimeout) { clearTimeout(toastTimeout); toastTimeout = null; }
-  }
+  // The message line is shared (/shared/messages.js).
+  function showToast(message, kind, why) { BBMessages.show(kind, message, { why: why }); }
+  function hideToast() { BBMessages.hide(); }
 
   // ---- View switching -------------------------------------------------
 
@@ -1023,7 +961,7 @@
       if (newItemsBusy) { select.value = type; return; }
       if (findNewItem(upc, target)) {
         select.value = type;
-        showToast(`${live.product_name} is already listed under ${newItemsGroupLabel(target)}.`, 'error', null);
+        showToast(`${live.product_name} is already listed under ${newItemsGroupLabel(target)}.`, 'error');
         return;
       }
       const before = { description: live.description, moved: live.moved };
@@ -1117,7 +1055,7 @@
     }
 
     input.addEventListener('focus', () => {
-      loadCatalog().catch(err => showToast(`Couldn't load products: ${err.message}`, 'error', null));
+      loadCatalog().catch(err => showToast("Couldn't load products.", 'error', err.message));
     });
     input.addEventListener('input', async () => {
       selected = null;
@@ -1151,7 +1089,7 @@
       if (!selected || newItemsBusy) return;
       const type = typeSelect.value;
       if (findNewItem(selected.upc, type)) {
-        showToast(`${selected.name} is already listed under ${newItemsGroupLabel(type)}.`, 'error', null);
+        showToast(`${selected.name} is already listed under ${newItemsGroupLabel(type)}.`, 'error');
         return;
       }
       const section = getNewItemsSection();
@@ -1499,10 +1437,10 @@
       openingRating = body.opening_rating;
       closingRating = body.closing_rating;
 
-      showToast('Draft saved.', 'success', 5000);
+      showToast('Draft saved.', 'success');
       return true;
     } catch (err) {
-      showToast(`Couldn't save: ${err.message}`, 'error', null);
+      showToast("Nothing changed. Couldn't save.", 'error', err.message);
       console.error(err);
       return false;
     } finally {
@@ -1537,7 +1475,7 @@
 
     // Never regenerate on a guess. The month must match the report on screen.
     if (!apiMonth || String(currentReport.month).slice(0, 7) !== apiMonth.slice(0, 7)) {
-      showToast('Could not confirm which month this report is for. Go back, reopen it, and try again.', 'error', null);
+      showToast('Could not confirm which month this report is for. Go back, reopen it, and try again.', 'error');
       return;
     }
 
@@ -1550,7 +1488,7 @@
       const el = document.getElementById(id);
       if (el) el.disabled = true;
     });
-    showToast('Regenerating. This can take about a minute.', 'success', null);
+    showToast('Regenerating. This can take about a minute.', 'working');
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 120000);
@@ -1577,8 +1515,8 @@
     // including the error banner if generation failed part way.
     await openReview(location);
     regenerating = false;
-    if (failure) showToast(`Couldn't regenerate: ${failure}`, 'error', null);
-    else showToast('Report regenerated.', 'success', 5000);
+    if (failure) showToast("Couldn't regenerate.", 'error', failure);
+    else showToast('Report regenerated.', 'success');
   }
 
   async function approveReport() {
@@ -1595,7 +1533,7 @@
     // email can never go out with stale text.
     const saved = await saveDraft();
     if (!saved) {
-      showToast('Could not save your edits — send cancelled.', 'error', null);
+      showToast('Could not save your edits — send cancelled.', 'error');
       if (approveBtn) approveBtn.disabled = false;
       if (saveBtn) saveBtn.disabled = false;
       return;
@@ -1611,10 +1549,10 @@
       if (!res.ok) throw new Error(body.error || `${res.status} ${res.statusText}`);
 
       currentReport = body;
-      showToast('Report sent.', 'success', 5000);
+      showToast('Report sent.', 'success');
       renderReview(currentReport);
     } catch (err) {
-      showToast(`Couldn't send: ${err.message}`, 'error', null);
+      showToast("Couldn't send.", 'error', err.message);
       console.error(err);
       if (approveBtn) approveBtn.disabled = false;
       if (saveBtn) saveBtn.disabled = false;
